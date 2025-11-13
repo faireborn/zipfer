@@ -1,6 +1,15 @@
 const std = @import("std");
-const zipfer = @import("zipfer");
+const Zipfer = @import("zipfer").Zipfer;
 
 pub fn main() !void {
-    std.debug.print("Hello, zipfer!", .{});
+    const allocator = std.heap.page_allocator;
+
+    var zipfer = Zipfer.init(allocator);
+    defer zipfer.deinit();
+
+    try zipfer.loadVocab("../test/test.vocab");
+
+    for (zipfer.vocab.items) |token| {
+        std.debug.print("{s}", .{token});
+    }
 }
