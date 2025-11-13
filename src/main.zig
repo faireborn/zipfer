@@ -7,7 +7,7 @@ pub fn main() !void {
     var zipfer = Zipfer.init(allocator);
     defer zipfer.deinit();
 
-    try zipfer.loadVocab("../test/test.vocab");
+    try zipfer.loadVocab("./test/test.vocab");
 
     for (zipfer.vocab.items) |token| {
         std.debug.print("{s}", .{token});
