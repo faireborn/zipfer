@@ -101,12 +101,12 @@ pub fn main() !void {
     const target_file = try std.fs.cwd().openFile(options.target.?, .{ .mode = .read_only });
     defer target_file.close();
 
-    const output_file = try std.fs.cwd().createFile(options.output.?, .{});
-    defer output_file.close();
-
     var zipfer = Zipfer.init(allocator);
     defer zipfer.deinit();
 
     try zipfer.loadVocab(vocab_file);
     try zipfer.count(target_file);
+
+    const output_file = try std.fs.cwd().createFile(options.output.?, .{});
+    defer output_file.close();
 }

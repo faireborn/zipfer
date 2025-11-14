@@ -1,5 +1,8 @@
 const Zipfer = @This();
 
+const Zipf = @import("type.zig").Zipf;
+const util = @import("util.zig");
+
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
@@ -10,6 +13,7 @@ const File = std.fs.File;
 vocab: ArrayList([]const u8),
 unk: usize,
 token_freq: std.StringHashMap(usize),
+zipf: ?[]Zipf,
 allocator: Allocator,
 arena: ArenaAllocator,
 
@@ -18,6 +22,7 @@ pub fn init(allocator: Allocator) Zipfer {
         .vocab = .empty,
         .unk = 0,
         .token_freq = std.StringHashMap(usize).init(allocator),
+        .zipf = null,
         .allocator = allocator,
         .arena = ArenaAllocator.init(allocator),
     };
@@ -28,6 +33,7 @@ pub fn deinit(self: *Zipfer) void {
 
     self.vocab.deinit(self.allocator);
     self.token_freq.deinit();
+    if (self.zipf != null) self.allocator.free(self.zipf.?);
 }
 
 pub fn loadVocab(self: *Zipfer, file: File) !void {
@@ -53,7 +59,7 @@ pub fn count(self: *Zipfer, file: File) !void {
         try self.token_freq.put(token, 0);
     }
 
-    var file_buffer: [1024]u8 = undefined;
+    var file_buffer: [1 << 20]u8 = undefined;
     var reader = file.reader(&file_buffer);
 
     while (try reader.interface.takeDelimiter('\n')) |line| {
@@ -68,6 +74,23 @@ pub fn count(self: *Zipfer, file: File) !void {
             }
         }
     }
+
+    self.zipf = try self.allocator.alloc(Zipf, self.token_freq.count());
+
+    var it = self.token_freq.iterator();
+    var i: usize = 0;
+    while (it.next()) |kv| : (i += 1) {
+        self.zipf.?[i].token = kv.key_ptr.*;
+        self.zipf.?[i].rank = null;
+        self.zipf.?[i].freq = kv.value_ptr.*;
+    }
+
+    util.sortZipf(self.zipf.?);
+}
+
+pub fn save(self: Zipfer, file: File) !void {
+    _ = self;
+    _ = file;
 }
 
 test "init deinit" {
