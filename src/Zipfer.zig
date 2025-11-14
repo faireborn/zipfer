@@ -71,7 +71,6 @@ pub fn count(self: *Zipfer, file: File) !void {
                 ptr.* += 1;
             } else {
                 self.unk += 1;
-                std.debug.print("{s}\n\n\n\n\n", .{token});
             }
         }
     }
@@ -92,8 +91,6 @@ pub fn count(self: *Zipfer, file: File) !void {
     for (self.zipf.?, 1..) |*entry, rank| {
         entry.rank = rank;
     }
-
-    //    std.debug.print("{any}", .{self.zipf});
 }
 
 pub fn save(self: Zipfer, file: File) !void {
@@ -105,7 +102,6 @@ pub fn save(self: Zipfer, file: File) !void {
     try writer.interface.print("unk\t{}\n\n", .{self.unk});
     try writer.interface.print("rank\ttoken\tfreq\n", .{});
 
-    std.debug.print("{}", .{self.zipf.?.len});
     for (self.zipf.?) |entry| {
         try writer.interface.print("{}\t{s}\t{}\n", .{ entry.rank.?, entry.token, entry.freq });
     }
