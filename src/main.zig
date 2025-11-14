@@ -109,4 +109,6 @@ pub fn main() !void {
 
     const output_file = try std.fs.cwd().createFile(options.output.?, .{});
     defer output_file.close();
+
+    try zipfer.save(output_file);
 }

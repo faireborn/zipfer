@@ -71,6 +71,7 @@ pub fn count(self: *Zipfer, file: File) !void {
                 ptr.* += 1;
             } else {
                 self.unk += 1;
+                std.debug.print("{s}\n\n\n\n\n", .{token});
             }
         }
     }
@@ -92,12 +93,23 @@ pub fn count(self: *Zipfer, file: File) !void {
         entry.rank = rank;
     }
 
-    std.debug.print("{any}", .{self.zipf});
+    //    std.debug.print("{any}", .{self.zipf});
 }
 
 pub fn save(self: Zipfer, file: File) !void {
-    _ = self;
-    _ = file;
+    if (self.zipf == null) return error.NoDataToSave;
+
+    var file_buffer: [1024]u8 = undefined;
+    var writer = file.writer(&file_buffer);
+
+    try writer.interface.print("unk\t{}\n\n", .{self.unk});
+    try writer.interface.print("rank\ttoken\tfreq\n", .{});
+
+    std.debug.print("{}", .{self.zipf.?.len});
+    for (self.zipf.?) |entry| {
+        try writer.interface.print("{}\t{s}\t{}\n", .{ entry.rank.?, entry.token, entry.freq });
+    }
+    try writer.interface.flush();
 }
 
 test "init deinit" {
@@ -125,6 +137,7 @@ test "load vocab" {
     try zipfer.loadVocab(file);
 
     const vocab = zipfer.vocab.items;
+    try std.testing.expectEqual(4, vocab.len);
     try std.testing.expect(std.mem.eql(u8, "hello,", vocab[0]));
     try std.testing.expect(std.mem.eql(u8, "world!", vocab[1]));
     try std.testing.expect(std.mem.eql(u8, "🍣", vocab[2]));
