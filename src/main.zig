@@ -2,14 +2,15 @@ const std = @import("std");
 const Zipfer = @import("zipfer").Zipfer;
 
 const usage_text =
-    \\Usage: zipfer --vocab=<vocab_file> --target=<target_file>
+    \\Usage: zipfer --vocab=<vocab_file> --target=<target_file> --output=<output_file>
     \\
     \\Compares the performance of the provided commands.
     \\
     \\Options:
-    \\ --help      Show help (This message)
-    \\ --vocab     Vocabulary file
-    \\ --target    Target file
+    \\ --help      show help (This message)
+    \\ --vocab     vocabulary file
+    \\ --target    target file
+    \\ --output    output file
     \\
 ;
 
@@ -17,11 +18,13 @@ const Flags = enum {
     help,
     vocab,
     target,
+    output,
     pub fn str(self: Flags) []const u8 {
         switch (self) {
             .help => return "--help",
             .vocab => return "--vocab",
             .target => return "--target",
+            .output => return "--output",
         }
     }
 };
@@ -29,7 +32,18 @@ const Flags = enum {
 const Options = struct {
     vocab: ?[]const u8,
     target: ?[]const u8,
+    output: ?[]const u8,
 };
+
+// helper for flag parsing
+fn parseFlag(arg: []const u8, flag: Flags, option: *?[]const u8) void {
+    const flag_len = flag.str().len;
+    if (arg.len <= flag_len or arg[flag_len] != '=') {
+        std.log.err("Invalid command line format: {s}\n", .{usage_text});
+        std.process.exit(1);
+    }
+    option.* = arg[(flag_len + 1)..];
+}
 
 pub fn main() !void {
     var stdout_buffer: [1024]u8 = undefined;
@@ -49,7 +63,7 @@ pub fn main() !void {
         std.process.exit(1);
     }
 
-    var options: Options = .{ .vocab = null, .target = null };
+    var options: Options = .{ .vocab = null, .target = null, .output = null };
 
     // Arg parse
     var arg_i: usize = 1;
@@ -63,20 +77,13 @@ pub fn main() !void {
             return std.process.cleanExit();
         } else if (std.mem.startsWith(u8, arg, Flags.vocab.str())) {
             // --vocab
-            const vocab_flag_len = Flags.vocab.str().len;
-            if (arg.len <= vocab_flag_len or arg[vocab_flag_len] != '=') {
-                std.log.err("Invalid command line format: {s}\n", .{usage_text});
-                std.process.exit(1);
-            }
-            options.vocab = arg[(vocab_flag_len + 1)..];
+            parseFlag(arg, Flags.vocab, &(options.vocab));
         } else if (std.mem.startsWith(u8, arg, Flags.target.str())) {
             // --target
-            const target_flag_len = Flags.target.str().len;
-            if (arg.len <= target_flag_len or arg[target_flag_len] != '=') {
-                std.log.err("Invalid command line format: {s}\n", .{usage_text});
-                std.process.exit(1);
-            }
-            options.target = arg[(target_flag_len + 1)..];
+            parseFlag(arg, Flags.target, &(options.target));
+        } else if (std.mem.startsWith(u8, arg, Flags.output.str())) {
+            // --output
+            parseFlag(arg, Flags.output, &(options.output));
         } else {
             std.log.err("Unrecognized argument: '{s}'\n{s}\n", .{ arg, usage_text });
             std.process.exit(1);
@@ -85,7 +92,7 @@ pub fn main() !void {
 
     // Check arguments
     if (options.vocab == null or options.target == null) {
-        std.log.err("Required to set both options: {s}\n", .{usage_text});
+        std.log.err("Required to set all options: {s}\n", .{usage_text});
     }
 
     const vocab_file = try std.fs.cwd().openFile(options.vocab.?, .{ .mode = .read_only });
@@ -94,12 +101,12 @@ pub fn main() !void {
     const target_file = try std.fs.cwd().openFile(options.target.?, .{ .mode = .read_only });
     defer target_file.close();
 
+    const output_file = try std.fs.cwd().createFile(options.output.?, .{});
+    defer output_file.close();
+
     var zipfer = Zipfer.init(allocator);
     defer zipfer.deinit();
 
     try zipfer.loadVocab(vocab_file);
-
-    for (zipfer.vocab.items) |token| {
-        std.debug.print("{s}", .{token});
-    }
+    try zipfer.count(target_file);
 }
