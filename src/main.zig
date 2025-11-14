@@ -4,7 +4,7 @@ const Zipfer = @import("zipfer").Zipfer;
 const usage_text =
     \\Usage: zipfer --vocab=<vocab_file> --target=<target_file> --output=<output_file>
     \\
-    \\Compares the performance of the provided commands.
+    \\Zipf toolkit
     \\
     \\Options:
     \\ --help      show help (This message)
