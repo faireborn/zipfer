@@ -86,6 +86,13 @@ pub fn count(self: *Zipfer, file: File) !void {
     }
 
     util.sortZipf(self.zipf.?);
+
+    // Set Rank
+    for (self.zipf.?, 1..) |*entry, rank| {
+        entry.rank = rank;
+    }
+
+    std.debug.print("{any}", .{self.zipf});
 }
 
 pub fn save(self: Zipfer, file: File) !void {
