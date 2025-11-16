@@ -1,5 +1,7 @@
 pub const Zipfer = @import("Zipfer.zig");
 
+const std = @import("std");
+
 test {
-    _ = @import("Zipfer.zig");
+    _ = Zipfer;
 }

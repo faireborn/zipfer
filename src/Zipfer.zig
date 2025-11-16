@@ -1,6 +1,7 @@
 const Zipfer = @This();
 
 const Zipf = @import("type.zig").Zipf;
+const r2 = @import("r2.zig");
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -103,6 +104,11 @@ pub fn count(self: *Zipfer, file: File) !void {
     }
 }
 
+pub fn eval(self: Zipfer, comptime T: type) T {
+    _ = self;
+    r2(u32);
+}
+
 pub fn save(self: Zipfer, file: File) !void {
     if (self.zipf.len == 0) return error.NoData;
 
@@ -189,4 +195,8 @@ test "count" {
     try std.testing.expectEqual(7, zipfer.token_freq.get("🍣").?);
     try std.testing.expectEqual(3, zipfer.token_freq.get("🤗").?);
     try std.testing.expectEqual(2, zipfer.unk);
+}
+
+test {
+    _ = r2;
 }
