@@ -1,5 +1,5 @@
 pub const Zipf = struct {
     token: []const u8,
-    rank: ?usize,
+    rank: usize,
     freq: usize,
 };

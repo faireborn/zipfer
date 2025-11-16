@@ -1,19 +1,19 @@
 const Zipfer = @This();
 
 const Zipf = @import("type.zig").Zipf;
-const util = @import("util.zig");
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const ArrayList = std.ArrayList;
 const ArenaAllocator = std.heap.ArenaAllocator;
 const Dir = std.fs.Dir;
 const File = std.fs.File;
+const ArrayList = std.ArrayList;
+const MultiArrayList = std.MultiArrayList;
 
 vocab: ArrayList([]const u8),
 unk: usize,
 token_freq: std.StringHashMap(usize),
-zipf: ?[]Zipf,
+zipf: MultiArrayList(Zipf),
 allocator: Allocator,
 arena: ArenaAllocator,
 
@@ -22,7 +22,7 @@ pub fn init(allocator: Allocator) Zipfer {
         .vocab = .empty,
         .unk = 0,
         .token_freq = std.StringHashMap(usize).init(allocator),
-        .zipf = null,
+        .zipf = .empty,
         .allocator = allocator,
         .arena = ArenaAllocator.init(allocator),
     };
@@ -30,10 +30,9 @@ pub fn init(allocator: Allocator) Zipfer {
 
 pub fn deinit(self: *Zipfer) void {
     self.arena.deinit();
-
     self.vocab.deinit(self.allocator);
     self.token_freq.deinit();
-    if (self.zipf != null) self.allocator.free(self.zipf.?);
+    self.zipf.deinit(self.allocator);
 }
 
 pub fn loadVocab(self: *Zipfer, file: File) !void {
@@ -75,26 +74,37 @@ pub fn count(self: *Zipfer, file: File) !void {
         }
     }
 
-    self.zipf = try self.allocator.alloc(Zipf, self.token_freq.count());
+    // Create MultiArrayList of `Zipf`
+    try self.zipf.resize(self.allocator, self.token_freq.count());
 
     var it = self.token_freq.iterator();
     var i: usize = 0;
     while (it.next()) |kv| : (i += 1) {
-        self.zipf.?[i].token = kv.key_ptr.*;
-        self.zipf.?[i].rank = null;
-        self.zipf.?[i].freq = kv.value_ptr.*;
+        self.zipf.set(i, .{
+            .token = kv.key_ptr.*,
+            .rank = undefined,
+            .freq = kv.value_ptr.*,
+        });
     }
 
-    util.sortZipf(self.zipf.?);
+    // Sort by freq
+    const sliced = self.zipf.slice();
+    self.zipf.sortUnstable(struct {
+        freqs: []usize,
+
+        pub fn lessThan(ctx: @This(), a: usize, b: usize) bool {
+            return ctx.freqs[a] > ctx.freqs[b];
+        }
+    }{ .freqs = sliced.items(.freq) });
 
     // Set Rank
-    for (self.zipf.?, 1..) |*entry, rank| {
-        entry.rank = rank;
+    for (self.zipf.slice().items(.rank), 1..) |*entry, rank| {
+        entry.* = rank;
     }
 }
 
 pub fn save(self: Zipfer, file: File) !void {
-    if (self.zipf == null) return error.NoDataToSave;
+    if (self.zipf.len == 0) return error.NoData;
 
     var file_buffer: [1024]u8 = undefined;
     var writer = file.writer(&file_buffer);
@@ -102,8 +112,9 @@ pub fn save(self: Zipfer, file: File) !void {
     try writer.interface.print("unk\t{}\n\n", .{self.unk});
     try writer.interface.print("rank\ttoken\tfreq\n", .{});
 
-    for (self.zipf.?) |entry| {
-        try writer.interface.print("{}\t{s}\t{}\n", .{ entry.rank.?, entry.token, entry.freq });
+    for (0..self.zipf.len) |i| {
+        const tmp = self.zipf.get(i);
+        try writer.interface.print("{}\t{s}\t{}\n", .{ tmp.rank, tmp.token, tmp.freq });
     }
     try writer.interface.flush();
 }
