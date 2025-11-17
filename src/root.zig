@@ -1,4 +1,5 @@
-pub const Zipfer = @import("Zipfer.zig");
+pub const Zipfer = ZipferImpl(f32);
+pub const ZipferImpl = @import("zipfer.zig").ZipferImpl;
 
 const std = @import("std");
 
