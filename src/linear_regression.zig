@@ -2,8 +2,6 @@ const std = @import("std");
 const util = @import("util.zig");
 
 pub fn model(comptime T: type, xs: []const T, ys: []const T) !T {
-    const tiny: T = 1.0e-20;
-
     if (xs.len == 0 or ys.len == 0) {
         std.log.err("Inputs must not be empty.", .{});
         return error.ValueError;
@@ -11,14 +9,15 @@ pub fn model(comptime T: type, xs: []const T, ys: []const T) !T {
 
     if (xs.len != ys.len) {
         std.log.err("The length of x and y must be equal.", .{});
+        return error.ValueError;
     }
 
     const length = xs.len;
     const x_mean = util.mean(T, xs);
     const y_mean = util.mean(T, ys);
 
-    std.debug.print("{}\n", .{x_mean});
-    std.debug.print("{}\n", .{y_mean});
+    _ = x_mean;
+    _ = y_mean;
 
     if (length > 1) {
         const x = xs[0];
@@ -37,7 +36,7 @@ pub fn model(comptime T: type, xs: []const T, ys: []const T) !T {
         }
     }
 
-    return tiny;
+    return 0;
 }
 
 test "model" {
