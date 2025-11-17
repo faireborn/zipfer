@@ -8,13 +8,14 @@ const Dir = std.fs.Dir;
 const File = std.fs.File;
 const ArrayList = std.ArrayList;
 const MultiArrayList = std.MultiArrayList;
+const log10 = std.math.log10;
 
 pub fn ZipferImpl(comptime T: type) type {
     return struct {
         vocab: ArrayList([]const u8),
         unk: usize,
         token_freq: std.StringHashMap(usize),
-        zipf: MultiArrayList(Zipf),
+        zipf: MultiArrayList(Zipf(T)),
         allocator: Allocator,
         arena: ArenaAllocator,
         score: ?T,
@@ -89,6 +90,8 @@ pub fn ZipferImpl(comptime T: type) type {
                     .token = kv.key_ptr.*,
                     .rank = undefined,
                     .freq = kv.value_ptr.*,
+                    .log_rank = undefined,
+                    .log_freq = undefined,
                 });
             }
 
@@ -108,27 +111,31 @@ pub fn ZipferImpl(comptime T: type) type {
             }
         }
 
-        pub fn eval(self: *Self) !?T {
-            const xs = self.zipf.slice().items(.rank);
-            const ys = self.zipf.slice().items(.freq);
+        pub fn eval(self: *Self) !void {
+            const sliced = self.zipf.slice();
+            const ranks = sliced.items(.rank);
+            const freqs = sliced.items(.freq);
+            var log_ranks = sliced.items(.log_rank);
+            var log_freqs = sliced.items(.log_freq);
 
-            const allocator = self.allocator;
+            for (0..self.zipf.len) |i| {
+                if (freqs[i] == 0) {
+                    log_ranks[i] = 0;
+                    log_freqs[i] = 0;
+                } else {
+                    log_ranks[i] = log10(@as(T, @floatFromInt(ranks[i])));
+                    log_freqs[i] = log10(@as(T, @floatFromInt(freqs[i])));
+                }
+            }
 
-            // Array for logs
-            const log_xs = try allocator.alloc(T, xs.len);
-            defer allocator.free(log_xs);
-
-            const log_ys = try allocator.alloc(T, ys.len);
-            defer allocator.free(log_ys);
-
-            const result = try lr.model(T, log_xs, log_ys);
+            const result = try lr.model(T, log_ranks, log_freqs);
 
             if (result.r) |r| {
                 // Return R^2 score
-                return r * r;
+                self.score = r * r;
             } else {
                 // If r value is null, return null
-                return null;
+                self.score = null;
             }
         }
 
@@ -138,12 +145,17 @@ pub fn ZipferImpl(comptime T: type) type {
             var file_buffer: [1024]u8 = undefined;
             var writer = file.writer(&file_buffer);
 
-            try writer.interface.print("unk\t{}\n\n", .{self.unk});
-            try writer.interface.print("rank\ttoken\tfreq\n", .{});
+            if (self.score) |score| {
+                try writer.interface.print("R^2\t{}\n", .{score});
+            } else {
+                try writer.interface.print("R^2\tnull\n", .{});
+            }
+            try writer.interface.print("unk\t{}\n", .{self.unk});
+            try writer.interface.print("token\trank\tfreq\tlog_rank\tlog_freq\n", .{});
 
             for (0..self.zipf.len) |i| {
                 const tmp = self.zipf.get(i);
-                try writer.interface.print("{}\t{s}\t{}\n", .{ tmp.rank, tmp.token, tmp.freq });
+                try writer.interface.print("{s}\t{}\t{}\t{}\t{}\n", .{ tmp.token, tmp.rank, tmp.freq, tmp.log_rank, tmp.log_freq });
             }
             try writer.interface.flush();
         }

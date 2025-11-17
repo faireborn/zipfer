@@ -106,7 +106,7 @@ pub fn main() !void {
 
     try zipfer.loadVocab(vocab_file);
     try zipfer.count(target_file);
-    _ = try zipfer.eval();
+    try zipfer.eval();
 
     const output_file = try std.fs.cwd().createFile(options.output.?, .{});
     defer output_file.close();

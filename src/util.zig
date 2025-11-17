@@ -45,6 +45,7 @@ pub fn cov(comptime T: type, xs: []const T, ys: []const T) !Cov(T) {
     var x_deviations = try allocator.alloc(T, length);
     var y_deviations = try allocator.alloc(T, length);
 
+    // Set deviations to xs and ys
     for (0..length) |i| {
         x_deviations[i] = xs[i] - x_mean;
         y_deviations[i] = ys[i] - y_mean;

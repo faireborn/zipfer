@@ -1,6 +1,6 @@
 .{
     .name = .zipfer,
-    .version = "0.0.0",
+    .version = "0.1.0",
     .fingerprint = 0xebd02c4992fa14c,
     .minimum_zig_version = "0.15.2",
     .paths = .{""},
