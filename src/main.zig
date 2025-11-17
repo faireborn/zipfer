@@ -105,8 +105,7 @@ pub fn main() !void {
     defer zipfer.deinit();
 
     try zipfer.loadVocab(vocab_file);
-    try zipfer.count(target_file);
-    try zipfer.eval();
+    try zipfer.eval(target_file);
 
     const output_file = try std.fs.cwd().createFile(options.output.?, .{});
     defer output_file.close();

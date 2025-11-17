@@ -12,24 +12,24 @@ const log10 = std.math.log10;
 
 pub fn ZipferImpl(comptime T: type) type {
     return struct {
+        allocator: Allocator,
+        arena: ArenaAllocator,
         vocab: ArrayList([]const u8),
         unk: usize,
         token_freq: std.StringHashMap(usize),
         zipf: MultiArrayList(Zipf(T)),
-        allocator: Allocator,
-        arena: ArenaAllocator,
         score: ?T,
 
         const Self = @This();
 
         pub fn init(allocator: Allocator) Self {
             return .{
+                .allocator = allocator,
+                .arena = ArenaAllocator.init(allocator),
                 .vocab = .empty,
                 .unk = 0,
                 .token_freq = std.StringHashMap(usize).init(allocator),
                 .zipf = .empty,
-                .allocator = allocator,
-                .arena = ArenaAllocator.init(allocator),
                 .score = undefined,
             };
         }
@@ -111,7 +111,11 @@ pub fn ZipferImpl(comptime T: type) type {
             }
         }
 
-        pub fn eval(self: *Self) !void {
+        pub fn eval(self: *Self, file_or_null: ?File) !void {
+            if (file_or_null) |file| try self.count(file) else {
+                if (self.token_freq.count() == 0) return error.FileIsNull;
+            }
+
             const sliced = self.zipf.slice();
             const ranks = sliced.items(.rank);
             const freqs = sliced.items(.freq);
