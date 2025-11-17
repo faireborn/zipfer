@@ -1,4 +1,5 @@
 const std = @import("std");
+const mean = @import("util.zig").mean;
 
 pub fn model(comptime T: type, xs: []const T, ys: []const T) !T {
     const tiny: T = 1.0e-20;
@@ -37,4 +38,8 @@ pub fn model(comptime T: type, xs: []const T, ys: []const T) !T {
 test "model" {
     _ = std.simd.suggestVectorLength(usize);
     _ = try model(f64, &[_]f64{ 0.0, 0.1 }, &[_]f64{ 0.0, 0.0 });
+}
+
+test {
+    _ = mean;
 }
