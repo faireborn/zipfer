@@ -11,12 +11,10 @@ pub fn Result(comptime T: type) type {
 
 pub fn model(comptime T: type, xs: []const T, ys: []const T) !Result(T) {
     if (xs.len == 0 or ys.len == 0) {
-        std.log.err("Inputs must not be empty.", .{});
         return error.ValueError;
     }
 
     if (xs.len != ys.len) {
-        std.log.err("The length of x and y must be equal.", .{});
         return error.ValueError;
     }
 
@@ -29,13 +27,7 @@ pub fn model(comptime T: type, xs: []const T, ys: []const T) !Result(T) {
                 break;
             }
 
-            if (i == xs.len - 1) {
-                std.log.err(
-                    \\Cannot calculate a linear regression 
-                    \\if all x values are identical.
-                , .{});
-                return error.ValueError;
-            }
+            if (i == xs.len - 1) return error.ValueError;
         }
     }
 
@@ -84,6 +76,27 @@ test "model" {
         try std.testing.expectApproxEqRel(0.9279293737226924, result.r.?, 1e-5);
         try std.testing.expectApproxEqRel(1.7653229021583134, result.slope, 1e-5);
         try std.testing.expectApproxEqRel(0.2648018073970857, result.intercept, 1e-5);
+    }
+}
+
+test "expect error" {
+    {
+        const xs = &[_]f64{};
+        const ys = &[_]f64{};
+
+        try std.testing.expectError(error.ValueError, model(f64, xs, ys));
+    }
+    {
+        const xs = &[_]f64{ 1, 2, 3 };
+        const ys = &[_]f64{ 1, 2, 3, 4 };
+
+        try std.testing.expectError(error.ValueError, model(f64, xs, ys));
+    }
+    {
+        const xs = &[_]f64{ 42, 42, 42 };
+        const ys = &[_]f64{ 0, 1, 2 };
+
+        try std.testing.expectError(error.ValueError, model(f64, xs, ys));
     }
 }
 
