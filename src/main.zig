@@ -39,7 +39,7 @@ const Options = struct {
 fn parseFlag(arg: []const u8, flag: Flags, option: *?[]const u8) void {
     const flag_len = flag.str().len;
     if (arg.len <= flag_len or arg[flag_len] != '=') {
-        std.log.err("Invalid command line format: {s}\n", .{usage_text});
+        std.log.err("Invalid command line format\n{s}\n", .{usage_text});
         std.process.exit(1);
     }
     option.* = arg[(flag_len + 1)..];
@@ -59,7 +59,7 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(arena);
 
     if (args.len < 2) {
-        std.log.err("Too few arguments: {s}\n", .{usage_text});
+        std.log.err("Too few arguments\n{s}\n", .{usage_text});
         std.process.exit(1);
     }
 
@@ -92,7 +92,7 @@ pub fn main() !void {
 
     // Check arguments
     if (options.vocab == null or options.target == null) {
-        std.log.err("Required to set all options: {s}\n", .{usage_text});
+        std.log.err("Required to set all options:\n{s}\n", .{usage_text});
     }
 
     const vocab_file = try std.fs.cwd().openFile(options.vocab.?, .{ .mode = .read_only });
