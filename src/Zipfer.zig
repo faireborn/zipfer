@@ -1,7 +1,7 @@
 const Zipfer = @This();
 
 const Zipf = @import("type.zig").Zipf;
-const r2 = @import("r2.zig");
+const lr = @import("linear_regression.zig");
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -106,7 +106,6 @@ pub fn count(self: *Zipfer, file: File) !void {
 
 pub fn eval(self: Zipfer, comptime T: type) T {
     _ = self;
-    r2(u32);
 }
 
 pub fn save(self: Zipfer, file: File) !void {
@@ -198,5 +197,5 @@ test "count" {
 }
 
 test {
-    _ = r2;
+    _ = lr;
 }
