@@ -1,5 +1,5 @@
 const std = @import("std");
-const mean = @import("util.zig").mean;
+const util = @import("util.zig");
 
 pub fn model(comptime T: type, xs: []const T, ys: []const T) !T {
     const tiny: T = 1.0e-20;
@@ -14,6 +14,11 @@ pub fn model(comptime T: type, xs: []const T, ys: []const T) !T {
     }
 
     const length = xs.len;
+    const x_mean = util.mean(T, xs);
+    const y_mean = util.mean(T, ys);
+
+    std.debug.print("{}\n", .{x_mean});
+    std.debug.print("{}\n", .{y_mean});
 
     if (length > 1) {
         const x = xs[0];
@@ -41,5 +46,5 @@ test "model" {
 }
 
 test {
-    _ = mean;
+    _ = util;
 }
