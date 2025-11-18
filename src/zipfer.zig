@@ -83,6 +83,7 @@ pub fn ZipferImpl(comptime T: type) type {
             // Create MultiArrayList of `Zipf`
             try self.zipf.resize(self.allocator, self.token_freq.count());
 
+            // Set token and freq to zipf
             var it = self.token_freq.iterator();
             var i: usize = 0;
             while (it.next()) |kv| : (i += 1) {
@@ -106,7 +107,7 @@ pub fn ZipferImpl(comptime T: type) type {
             }{ .freqs = sliced.items(.freq) });
 
             // Set Rank
-            for (self.zipf.slice().items(.rank), 1..) |*entry, rank| {
+            for (sliced.items(.rank), 1..) |*entry, rank| {
                 entry.* = rank;
             }
         }
