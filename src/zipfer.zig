@@ -123,11 +123,10 @@ pub fn ZipferImpl(comptime T: type) type {
             var log_freqs = sliced.items(.log_freq);
 
             for (0..self.zipf.len) |i| {
+                log_ranks[i] = log10(@as(T, @floatFromInt(ranks[i])));
                 if (freqs[i] == 0) {
-                    log_ranks[i] = 0;
                     log_freqs[i] = 0;
                 } else {
-                    log_ranks[i] = log10(@as(T, @floatFromInt(ranks[i])));
                     log_freqs[i] = log10(@as(T, @floatFromInt(freqs[i])));
                 }
             }
