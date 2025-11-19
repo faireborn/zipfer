@@ -14,12 +14,14 @@ pub fn model(comptime T: type, xs: []const T, ys: []const T) !Result(T) {
         return error.ValueError;
     }
 
+    // The length of xs and ys must be equal
     if (xs.len != ys.len) {
         return error.ValueError;
     }
 
     const length = xs.len;
 
+    // xs must not be indentical
     if (length > 1) {
         const x = xs[0];
         for (1..xs.len) |i| {
