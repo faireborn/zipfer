@@ -143,25 +143,39 @@ pub fn ZipferImpl(comptime T: type) type {
             }
         }
 
-        pub fn save(self: Self, file: File) !void {
-            if (self.zipf.len == 0) return error.NoData;
+        pub fn write(self: Self, dir: Dir) !void {
+            if (self.zipf.len == 0) return error.NoDataToWrite;
 
             var file_buffer: [1024]u8 = undefined;
-            var writer = file.writer(&file_buffer);
 
-            if (self.score) |score| {
-                try writer.interface.print("R^2\t{}\n", .{score});
-            } else {
-                try writer.interface.print("R^2\tnull\n", .{});
-            }
-            try writer.interface.print("unk\t{}\n", .{self.unk});
-            try writer.interface.print("token\trank\tfreq\tlog_rank\tlog_freq\n", .{});
+            // Write tokens info to a file
+            var tokens_file = try dir.createFile("tokens.tsv", .{});
+            var tokens_writer = tokens_file.writer(&file_buffer);
+            try tokens_writer.interface.print("token\trank\tfreq\tlog_rank\tlog_freq\n", .{});
 
             for (0..self.zipf.len) |i| {
                 const tmp = self.zipf.get(i);
-                try writer.interface.print("{s}\t{}\t{}\t{}\t{}\n", .{ tmp.token, tmp.rank, tmp.freq, tmp.log_rank, tmp.log_freq });
+                try tokens_writer.interface.print("{s}\t{}\t{}\t{}\t{}\n", .{ tmp.token, tmp.rank, tmp.freq, tmp.log_rank, tmp.log_freq });
             }
-            try writer.interface.flush();
+            try tokens_writer.interface.flush();
+
+            // Write some extra info to a file
+            var info_file = try dir.createFile("info.txt", .{});
+            var info_writer = info_file.writer(&file_buffer);
+            if (self.unk > 0) {
+                try info_writer.interface.print("Unknown tokens count = {}\n", .{self.unk});
+            }
+            try info_writer.interface.flush();
+
+            // If score is not null, create a file and write a score to the file
+            if (self.score) |score| {
+                var score_file = try dir.createFile("score.txt", .{});
+                var score_writer = score_file.writer(&file_buffer);
+                try score_writer.interface.print("{}", .{score});
+                try score_writer.interface.flush();
+            } else {
+                return error.ScoreIsNull;
+            }
         }
     };
 }

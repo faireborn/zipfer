@@ -92,14 +92,14 @@ pub fn main() !void {
     const target_file = try std.fs.cwd().openFile(options.target.?, .{ .mode = .read_only });
     defer target_file.close();
 
+    try std.fs.cwd().makeDir(options.output.?);
+    var dir = try std.fs.cwd().openDir(options.output.?, .{});
+    defer dir.close();
+
     var zipfer = Zipfer.init(allocator);
     defer zipfer.deinit();
 
     try zipfer.loadVocab(vocab_file);
     try zipfer.eval(target_file);
-
-    const output_file = try std.fs.cwd().createFile(options.output.?, .{});
-    defer output_file.close();
-
-    try zipfer.save(output_file);
+    try zipfer.write(dir);
 }
