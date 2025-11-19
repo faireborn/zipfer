@@ -167,12 +167,12 @@ pub fn ZipferImpl(comptime T: type) type {
 }
 
 test "init deinit" {
-    var zipfer = ZipferImpl(f64).init(std.testing.allocator);
+    var zipfer = ZipferImpl(f32).init(std.testing.allocator);
     defer zipfer.deinit();
 }
 
 test "load vocab" {
-    var zipfer = ZipferImpl(f64).init(std.testing.allocator);
+    var zipfer = ZipferImpl(f32).init(std.testing.allocator);
     defer zipfer.deinit();
 
     var tmp = std.testing.tmpDir(.{});
@@ -199,7 +199,7 @@ test "load vocab" {
 }
 
 test "count" {
-    var zipfer = ZipferImpl(f64).init(std.testing.allocator);
+    var zipfer = ZipferImpl(f32).init(std.testing.allocator);
     defer zipfer.deinit();
 
     var tmp = std.testing.tmpDir(.{ .iterate = true });
