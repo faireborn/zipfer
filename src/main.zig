@@ -2,7 +2,7 @@ const std = @import("std");
 const Zipfer = @import("zipfer").Zipfer;
 
 const usage_text =
-    \\Usage: zipfer --vocab=<vocab_file> --target=<target_file> --output=<output_file>
+    \\Usage: zipfer --vocab=<vocab_file> --target=<target_file> --output=<output_directory>
     \\
     \\Zipf toolkit
     \\
@@ -10,7 +10,7 @@ const usage_text =
     \\ --help      show help (This message)
     \\ --vocab     vocabulary file
     \\ --target    target file
-    \\ --output    output file
+    \\ --output    output directory
     \\
 ;
 

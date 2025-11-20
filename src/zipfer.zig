@@ -123,16 +123,19 @@ pub fn ZipferImpl(comptime T: type) type {
             var log_ranks = sliced.items(.log_rank);
             var log_freqs = sliced.items(.log_freq);
 
+            var tail: usize = undefined;
             for (0..self.zipf.len) |i| {
                 log_ranks[i] = log10(@as(T, @floatFromInt(ranks[i])));
                 if (freqs[i] == 0) {
-                    log_freqs[i] = 0;
+                    tail = i;
+                    break;
                 } else {
                     log_freqs[i] = log10(@as(T, @floatFromInt(freqs[i])));
                 }
             }
 
-            const result = try lr.model(T, log_ranks, log_freqs);
+            // We don't consider tokens with a frequency of 0 (0..tail)
+            const result = try lr.model(T, log_ranks[0..tail], log_freqs[0..tail]);
 
             if (result.r) |r| {
                 // Return R^2 score
