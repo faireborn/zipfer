@@ -18,6 +18,7 @@ pub fn ZipferImpl(comptime T: type) type {
         unk: usize,
         token_freq: std.StringHashMap(usize),
         zipf: MultiArrayList(Zipf(T)),
+        tail: usize, // use only zipf[0..tail] and discard the rest
         score: ?T,
 
         const Self = @This();
@@ -30,6 +31,7 @@ pub fn ZipferImpl(comptime T: type) type {
                 .unk = 0,
                 .token_freq = std.StringHashMap(usize).init(allocator),
                 .zipf = .empty,
+                .tail = 0,
                 .score = undefined,
             };
         }
@@ -117,25 +119,34 @@ pub fn ZipferImpl(comptime T: type) type {
                 if (self.token_freq.count() == 0) return error.FileIsNull;
             }
 
+            self.tail = self.zipf.len;
+
             const sliced = self.zipf.slice();
             const ranks = sliced.items(.rank);
             const freqs = sliced.items(.freq);
             var log_ranks = sliced.items(.log_rank);
             var log_freqs = sliced.items(.log_freq);
 
-            var tail: usize = undefined;
             for (0..self.zipf.len) |i| {
-                log_ranks[i] = log10(@as(T, @floatFromInt(ranks[i])));
-                if (freqs[i] == 0) {
-                    tail = i;
+                // log(rank)
+                const log_rank = log10(@as(T, @floatFromInt(ranks[i])));
+                // We consider only tokens with log(rank) <= 6
+                if (log_rank > 6) {
+                    self.tail = i;
                     break;
-                } else {
-                    log_freqs[i] = log10(@as(T, @floatFromInt(freqs[i])));
                 }
+                log_ranks[i] = log_rank;
+
+                // log(freq)
+                if (freqs[i] == 0) {
+                    self.tail = i;
+                    break;
+                }
+                log_freqs[i] = log10(@as(T, @floatFromInt(freqs[i])));
             }
 
             // We don't consider tokens with a frequency of 0 (0..tail)
-            const result = try lr.model(T, log_ranks[0..tail], log_freqs[0..tail]);
+            const result = try lr.model(T, log_ranks[0..self.tail], log_freqs[0..self.tail]);
 
             if (result.r) |r| {
                 // Return R^2 score
@@ -156,7 +167,7 @@ pub fn ZipferImpl(comptime T: type) type {
             var tokens_writer = tokens_file.writer(&file_buffer);
             try tokens_writer.interface.print("token\trank\tfreq\tlog_rank\tlog_freq\n", .{});
 
-            for (0..self.zipf.len) |i| {
+            for (0..self.tail) |i| {
                 const tmp = self.zipf.get(i);
                 try tokens_writer.interface.print("{s}\t{}\t{}\t{}\t{}\n", .{ tmp.token, tmp.rank, tmp.freq, tmp.log_rank, tmp.log_freq });
             }
