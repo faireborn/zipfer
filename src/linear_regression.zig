@@ -1,7 +1,7 @@
 const std = @import("std");
 const util = @import("util.zig");
 
-pub fn Result(comptime T: type) type {
+pub fn LRResult(comptime T: type) type {
     return struct {
         r: ?T,
         slope: T,
@@ -9,7 +9,7 @@ pub fn Result(comptime T: type) type {
     };
 }
 
-pub fn model(comptime T: type, xs: []const T, ys: []const T) !Result(T) {
+pub fn model(comptime T: type, xs: []const T, ys: []const T) !LRResult(T) {
     if (xs.len == 0 or ys.len == 0) {
         return error.ValueError;
     }
@@ -37,7 +37,7 @@ pub fn model(comptime T: type, xs: []const T, ys: []const T) !Result(T) {
     const y_mean = util.mean(T, ys);
     const cov = try util.cov(T, xs, ys);
 
-    var result: Result(T) = .{
+    var result: LRResult(T) = .{
         .r = undefined,
         .slope = undefined,
         .intercept = undefined,

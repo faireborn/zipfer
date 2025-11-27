@@ -7,3 +7,11 @@ pub fn Zipf(comptime T: type) type {
         log_freq: T,
     };
 }
+
+pub fn ZipferResult(comptime T: type) type {
+    return struct {
+        score: ?T,
+        slope: T,
+        intercept: T,
+    };
+}

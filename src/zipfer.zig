@@ -1,4 +1,5 @@
 const Zipf = @import("type.zig").Zipf;
+const ZipferResult = @import("type.zig").ZipferResult;
 const lr = @import("linear_regression.zig");
 
 const std = @import("std");
@@ -19,7 +20,7 @@ pub fn ZipferImpl(comptime T: type) type {
         token_freq: std.StringHashMap(usize),
         zipf: MultiArrayList(Zipf(T)),
         tail: usize, // use only zipf[0..tail] and discard the rest
-        score: ?T,
+        result: ?ZipferResult(T),
 
         const Self = @This();
 
@@ -32,7 +33,7 @@ pub fn ZipferImpl(comptime T: type) type {
                 .token_freq = std.StringHashMap(usize).init(allocator),
                 .zipf = .empty,
                 .tail = 0,
-                .score = undefined,
+                .result = null,
             };
         }
 
@@ -146,15 +147,9 @@ pub fn ZipferImpl(comptime T: type) type {
             }
 
             // We don't consider tokens with a frequency of 0 (0..tail)
-            const result = try lr.model(T, log_ranks[0..self.tail], log_freqs[0..self.tail]);
+            const lr_result = try lr.model(T, log_ranks[0..self.tail], log_freqs[0..self.tail]);
 
-            if (result.r) |r| {
-                // Return R^2 score
-                self.score = r * r;
-            } else {
-                // If r value is null, return null
-                self.score = null;
-            }
+            self.result = .{ .score = if (lr_result.r) |r| r * r else null, .slope = lr_result.slope, .intercept = lr_result.intercept };
         }
 
         pub fn write(self: Self, dir: Dir) !void {
@@ -181,14 +176,19 @@ pub fn ZipferImpl(comptime T: type) type {
             }
             try info_writer.interface.flush();
 
-            // If score is not null, create a file and write a score to the file
-            if (self.score) |score| {
-                var score_file = try dir.createFile("score.txt", .{});
-                var score_writer = score_file.writer(&file_buffer);
-                try score_writer.interface.print("{}", .{score});
-                try score_writer.interface.flush();
+            // If result is not null, create a file and write a result to the file
+            if (self.result) |result| {
+                var result_file = try dir.createFile("result.tsv", .{});
+                var result_writer = result_file.writer(&file_buffer);
+                try result_writer.interface.print("R^2\tslope\tintercept\n", .{});
+                if (self.result.?.score) |score| {
+                    try result_writer.interface.print("{}\t{}\t{}", .{ score, result.slope, result.intercept });
+                } else {
+                    try result_writer.interface.print("null\t{}\t{}", .{ result.slope, result.intercept });
+                }
+                try result_writer.interface.flush();
             } else {
-                return error.ScoreIsNull;
+                return error.ResultIsNull;
             }
         }
     };
