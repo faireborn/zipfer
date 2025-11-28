@@ -10,8 +10,9 @@ pub fn Zipf(comptime T: type) type {
 
 pub fn ZipferResult(comptime T: type) type {
     return struct {
-        score: ?T,
+        R_squared: ?T,
         slope: T,
         intercept: T,
+        mae: T,
     };
 }

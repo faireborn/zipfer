@@ -1,6 +1,7 @@
 const Zipf = @import("type.zig").Zipf;
 const ZipferResult = @import("type.zig").ZipferResult;
 const lr = @import("linear_regression.zig");
+const util = @import("util.zig");
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -125,8 +126,8 @@ pub fn ZipferImpl(comptime T: type) type {
             const sliced = self.zipf.slice();
             const ranks = sliced.items(.rank);
             const freqs = sliced.items(.freq);
-            var log_ranks = sliced.items(.log_rank);
-            var log_freqs = sliced.items(.log_freq);
+            const log_ranks = sliced.items(.log_rank);
+            const log_freqs = sliced.items(.log_freq);
 
             for (0..self.zipf.len) |i| {
                 // log(rank)
@@ -149,7 +150,17 @@ pub fn ZipferImpl(comptime T: type) type {
             // We don't consider tokens with a frequency of 0 (0..tail)
             const lr_result = try lr.model(T, log_ranks[0..self.tail], log_freqs[0..self.tail]);
 
-            self.result = .{ .score = if (lr_result.r) |r| r * r else null, .slope = lr_result.slope, .intercept = lr_result.intercept };
+            const slope = lr_result.slope;
+            const intercept = lr_result.intercept;
+
+            const absolute_errors = try self.allocator.alloc(T, self.tail);
+            for (absolute_errors, log_ranks, log_freqs) |*absolute_error, log_rank, log_freq| {
+                const zipf_log_freq = slope * log_rank + intercept;
+                absolute_error.* = @abs(zipf_log_freq - log_freq);
+            }
+
+            // Set results (R^2, slope, intercept, MAE)
+            self.result = .{ .R_squared = if (lr_result.r) |r| r * r else null, .slope = slope, .intercept = intercept, .mae = util.mean(T, absolute_errors) };
         }
 
         pub fn write(self: Self, dir: Dir) !void {
@@ -180,11 +191,11 @@ pub fn ZipferImpl(comptime T: type) type {
             if (self.result) |result| {
                 var result_file = try dir.createFile("result.tsv", .{});
                 var result_writer = result_file.writer(&file_buffer);
-                try result_writer.interface.print("R^2\tslope\tintercept\n", .{});
-                if (self.result.?.score) |score| {
-                    try result_writer.interface.print("{}\t{}\t{}", .{ score, result.slope, result.intercept });
+                try result_writer.interface.print("R^2\tslope\tintercept\tMAE\n", .{});
+                if (self.result.?.R_squared) |R_squared| {
+                    try result_writer.interface.print("{}\t{}\t{}\t{}", .{ R_squared, result.slope, result.intercept, result.mae });
                 } else {
-                    try result_writer.interface.print("null\t{}\t{}", .{ result.slope, result.intercept });
+                    try result_writer.interface.print("null\t{}\t{}\t{}", .{ result.slope, result.intercept, result.mae });
                 }
                 try result_writer.interface.flush();
             } else {
