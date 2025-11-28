@@ -8,13 +8,6 @@ pub fn Zipf(comptime T: type) type {
     };
 }
 
-pub fn UnZipf(comptime T: type) type {
-    return struct {
-        token: []const u8,
-        loss: T,
-    };
-}
-
 pub fn ZipferResult(comptime T: type) type {
     return struct {
         R_squared: ?T,

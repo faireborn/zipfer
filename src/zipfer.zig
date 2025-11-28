@@ -1,5 +1,4 @@
 const Zipf = t.Zipf;
-const UnZipf = t.UnZipf;
 const ZipferResult = t.ZipferResult;
 const t = @import("type.zig");
 const lr = @import("linear_regression.zig");
@@ -23,7 +22,6 @@ pub fn ZipferImpl(comptime T: type) type {
         token_freq: std.StringHashMap(usize),
         zipf: MultiArrayList(Zipf(T)),
         tail: usize, // use only zipf[0..tail] and discard the rest
-        unzipf_tokens: MultiArrayList(UnZipf(T)),
         result: ?ZipferResult(T),
 
         const Self = @This();
@@ -37,7 +35,6 @@ pub fn ZipferImpl(comptime T: type) type {
                 .token_freq = std.StringHashMap(usize).init(allocator),
                 .zipf = .empty,
                 .tail = 0,
-                .unzipf_tokens = .empty,
                 .result = null,
             };
         }
@@ -128,7 +125,6 @@ pub fn ZipferImpl(comptime T: type) type {
             self.tail = self.zipf.len;
 
             const sliced = self.zipf.slice();
-            const tokens = sliced.items(.token);
             const ranks = sliced.items(.rank);
             const freqs = sliced.items(.freq);
             const log_ranks = sliced.items(.log_rank);
@@ -167,19 +163,6 @@ pub fn ZipferImpl(comptime T: type) type {
 
             // Set results (R^2, slope, intercept, MAE)
             self.result = .{ .R_squared = if (lr_result.r) |r| r * r else null, .slope = slope, .intercept = intercept, .mae = util.mean(T, absolute_errors) };
-
-            try self.unzipf_tokens.resize(self.allocator, self.tail);
-            @memcpy(self.unzipf_tokens.slice().items(.token), tokens);
-            @memcpy(self.unzipf_tokens.slice().items(.loss), absolute_errors);
-
-            // Sort by loss
-            self.unzipf_tokens.sortUnstable(struct {
-                losses: []T,
-
-                pub fn lessThan(ctx: @This(), a: usize, b: usize) bool {
-                    return ctx.losses[a] > ctx.losses[b];
-                }
-            }{ .losses = self.unzipf_tokens.slice().items(.loss) });
         }
 
         pub fn write(self: Self, dir: Dir) !void {
@@ -220,17 +203,6 @@ pub fn ZipferImpl(comptime T: type) type {
             } else {
                 return error.ResultIsNull;
             }
-
-            // Unzipf tokens
-            var unzipf_file = try dir.createFile("unzipf.tsv", .{});
-            var unzipf_writer = unzipf_file.writer(&file_buffer);
-
-            try unzipf_writer.interface.print("token\tloss\n", .{});
-            for (0..self.tail) |i| {
-                const tmp = self.unzipf_tokens.get(i);
-                try unzipf_writer.interface.print("{s}\t{}\n", .{ tmp.token, tmp.loss });
-            }
-            try unzipf_writer.interface.flush();
         }
     };
 }
