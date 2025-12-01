@@ -47,7 +47,7 @@ pub fn ZipferImpl(comptime T: type) type {
         }
 
         pub fn loadVocab(self: *Self, file: File) !void {
-            var file_buffer: [1024]u8 = undefined;
+            var file_buffer: [256]u8 = undefined;
             var reader = file.reader(&file_buffer);
 
             while (try reader.interface.takeDelimiter('\n')) |line| {
