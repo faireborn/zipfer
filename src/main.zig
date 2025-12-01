@@ -86,20 +86,10 @@ pub fn main() !void {
         std.process.exit(1);
     }
 
-    const vocab_file = try std.fs.cwd().openFile(options.vocab.?, .{ .mode = .read_only });
-    defer vocab_file.close();
-
-    const target_file = try std.fs.cwd().openFile(options.target.?, .{ .mode = .read_only });
-    defer target_file.close();
-
-    try std.fs.cwd().makeDir(options.output.?);
-    var dir = try std.fs.cwd().openDir(options.output.?, .{});
-    defer dir.close();
-
     var zipfer = Zipfer.init(allocator);
     defer zipfer.deinit();
 
-    try zipfer.loadVocab(vocab_file);
-    try zipfer.eval(target_file);
-    try zipfer.write(dir);
+    try zipfer.loadVocab(options.vocab.?);
+    try zipfer.eval(options.target.?);
+    try zipfer.write(options.output.?);
 }

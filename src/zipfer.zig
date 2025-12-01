@@ -46,7 +46,10 @@ pub fn ZipferImpl(comptime T: type) type {
             self.zipf.deinit(self.allocator);
         }
 
-        pub fn loadVocab(self: *Self, file: File) !void {
+        pub fn loadVocab(self: *Self, file_name: []const u8) !void {
+            const file = try std.fs.cwd().openFile(file_name, .{ .mode = .read_only });
+            defer file.close();
+
             var file_buffer: [256]u8 = undefined;
             var reader = file.reader(&file_buffer);
 
@@ -63,7 +66,10 @@ pub fn ZipferImpl(comptime T: type) type {
             }
         }
 
-        pub fn count(self: *Self, file: File) !void {
+        pub fn count(self: *Self, file_name: []const u8) !void {
+            const file = try std.fs.cwd().openFile(file_name, .{ .mode = .read_only });
+            defer file.close();
+
             // Initialize hash map
             for (self.vocab.items) |token| {
                 try self.token_freq.put(token, 0);
@@ -117,8 +123,8 @@ pub fn ZipferImpl(comptime T: type) type {
             }
         }
 
-        pub fn eval(self: *Self, file_or_null: ?File) !void {
-            if (file_or_null) |file| try self.count(file) else {
+        pub fn eval(self: *Self, file_name_or_null: ?[]const u8) !void {
+            if (file_name_or_null) |file_name| try self.count(file_name) else {
                 if (self.token_freq.count() == 0) return error.FileIsNull;
             }
 
@@ -165,7 +171,11 @@ pub fn ZipferImpl(comptime T: type) type {
             self.result = .{ .R_squared = if (lr_result.r) |r| r * r else null, .slope = slope, .intercept = intercept, .mae = util.mean(T, absolute_errors) };
         }
 
-        pub fn write(self: Self, dir: Dir) !void {
+        pub fn write(self: Self, dir_name: []const u8) !void {
+            try std.fs.cwd().makeDir(dir_name);
+            var dir = try std.fs.cwd().openDir(dir_name, .{});
+            defer dir.close();
+
             if (self.zipf.len == 0) return error.NoDataToWrite;
 
             var file_buffer: [1024]u8 = undefined;
