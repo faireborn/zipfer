@@ -3,7 +3,7 @@
 mkdir -p \
   ./data/minipile/data/trained \
   ./data/minipile/data/encoded \
-  ./result
+  ./results
 
 printf "Training tokenizers...\n"
 ./tokenizer_train.sh ||
