@@ -70,7 +70,7 @@ pub fn ZipferImpl(comptime T: type) type {
                 try self.token_freq.put(token, 0);
             }
 
-            var input = try filesystem.ReadableFile(1 << 20).init(file_name);
+            var input = try filesystem.ReadableFile(1 << 22).init(file_name);
             defer input.deinit();
 
             while (try input.readLine('\n')) |line| {
