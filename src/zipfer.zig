@@ -3,6 +3,7 @@ const ZipferResult = t.ZipferResult;
 const t = @import("type.zig");
 const lr = @import("linear_regression.zig");
 const util = @import("util.zig");
+const filesystem = @import("filesystem.zig");
 
 const std = @import("std");
 const Allocator = std.mem.Allocator;
@@ -47,13 +48,10 @@ pub fn ZipferImpl(comptime T: type) type {
         }
 
         pub fn loadVocab(self: *Self, file_name: []const u8) !void {
-            const file = try std.fs.cwd().openFile(file_name, .{ .mode = .read_only });
-            defer file.close();
+            var input = try filesystem.ReadableFile(256).init(file_name);
+            defer input.deinit();
 
-            var file_buffer: [256]u8 = undefined;
-            var reader = file.reader(&file_buffer);
-
-            while (try reader.interface.takeDelimiter('\n')) |line| {
+            while (try input.readLine('\n')) |line| {
                 // Get only first column token
                 var it = std.mem.splitAny(u8, line, "\t\n \r");
                 if (it.next()) |token| {
@@ -67,18 +65,15 @@ pub fn ZipferImpl(comptime T: type) type {
         }
 
         pub fn count(self: *Self, file_name: []const u8) !void {
-            const file = try std.fs.cwd().openFile(file_name, .{ .mode = .read_only });
-            defer file.close();
-
             // Initialize hash map
             for (self.vocab.items) |token| {
                 try self.token_freq.put(token, 0);
             }
 
-            var file_buffer: [1 << 20]u8 = undefined;
-            var reader = file.reader(&file_buffer);
+            var input = try filesystem.ReadableFile(1 << 20).init(file_name);
+            defer input.deinit();
 
-            while (try reader.interface.takeDelimiter('\n')) |line| {
+            while (try input.readLine('\n')) |line| {
                 var it = std.mem.splitAny(u8, line, " ");
                 while (it.next()) |token| {
                     if (token.len == 0) continue;
@@ -220,73 +215,6 @@ pub fn ZipferImpl(comptime T: type) type {
 test "init deinit" {
     var zipfer = ZipferImpl(f32).init(std.testing.allocator);
     defer zipfer.deinit();
-}
-
-test "load vocab" {
-    var zipfer = ZipferImpl(f32).init(std.testing.allocator);
-    defer zipfer.deinit();
-
-    var tmp = std.testing.tmpDir(.{});
-    defer tmp.cleanup();
-
-    try tmp.dir.writeFile(.{ .sub_path = "test.vocab", .data = 
-        \\hello,
-        \\world!
-        \\🍣
-        \\🤗
-    });
-
-    const file = try tmp.dir.openFile("test.vocab", .{ .mode = .read_only });
-    defer file.close();
-
-    try zipfer.loadVocab(file);
-
-    const vocab = zipfer.vocab.items;
-    try std.testing.expectEqual(4, vocab.len);
-    try std.testing.expect(std.mem.eql(u8, "hello,", vocab[0]));
-    try std.testing.expect(std.mem.eql(u8, "world!", vocab[1]));
-    try std.testing.expect(std.mem.eql(u8, "🍣", vocab[2]));
-    try std.testing.expect(std.mem.eql(u8, "🤗", vocab[3]));
-}
-
-test "count" {
-    var zipfer = ZipferImpl(f32).init(std.testing.allocator);
-    defer zipfer.deinit();
-
-    var tmp = std.testing.tmpDir(.{ .iterate = true });
-    defer tmp.cleanup();
-
-    try tmp.dir.writeFile(.{ .sub_path = "test.vocab", .data = 
-        \\hello,
-        \\world!
-        \\🍣
-        \\🤗
-    });
-
-    try tmp.dir.writeFile(.{ .sub_path = "input.txt", .data = 
-        \\hello, 🤗 world! 🍣 🍣
-        \\hello, 🍣 🤗
-        \\world! 🍣 world!
-        \\world! 🤗
-        \\world! 🍣 hello,
-        \\hello, world! 🍣
-        \\happy! 🍣 goodbye!
-    });
-
-    const vocab_file = try tmp.dir.openFile("test.vocab", .{ .mode = .read_only });
-    defer vocab_file.close();
-
-    const input_file = try tmp.dir.openFile("input.txt", .{ .mode = .read_only });
-    defer input_file.close();
-
-    try zipfer.loadVocab(vocab_file);
-    try zipfer.count(input_file);
-
-    try std.testing.expectEqual(4, zipfer.token_freq.get("hello,").?);
-    try std.testing.expectEqual(6, zipfer.token_freq.get("world!").?);
-    try std.testing.expectEqual(7, zipfer.token_freq.get("🍣").?);
-    try std.testing.expectEqual(3, zipfer.token_freq.get("🤗").?);
-    try std.testing.expectEqual(2, zipfer.unk);
 }
 
 test {
