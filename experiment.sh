@@ -6,8 +6,16 @@ ALGORITHM_LIST=(
 )
 
 VOCAB_SIZE_LIST=(
+  "10000"
+  "20000"
   "30000"
+  "40000"
   "50000"
+  "60000"
+  "70000"
+  "80000"
+  "90000"
+  "100000"
 )
 
 TRAINED_DIR=./data/minipile/data/trained
