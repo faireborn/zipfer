@@ -20,7 +20,7 @@ pub fn ZipferImpl(comptime T: type) type {
         arena: ArenaAllocator,
         vocab: ArrayList([]const u8),
         unk: usize,
-        token_freq: std.StringHashMap(usize),
+        token_freq: std.AutoHashMap(usize, usize),
         zipf: MultiArrayList(Zipf(T)),
         tail: usize, // use only zipf[0..tail] and discard the rest
         result: ?ZipferResult(T),
@@ -33,7 +33,7 @@ pub fn ZipferImpl(comptime T: type) type {
                 .arena = ArenaAllocator.init(allocator),
                 .vocab = .empty,
                 .unk = 0,
-                .token_freq = std.StringHashMap(usize).init(allocator),
+                .token_freq = std.AutoHashMap(usize, usize).init(allocator),
                 .zipf = .empty,
                 .tail = 0,
                 .result = null,
@@ -47,41 +47,20 @@ pub fn ZipferImpl(comptime T: type) type {
             self.zipf.deinit(self.allocator);
         }
 
-        pub fn loadVocab(self: *Self, file_name: []const u8) !void {
-            var input = try filesystem.ReadableFile(256).init(file_name);
-            defer input.deinit();
-
-            while (try input.readLine('\n')) |line| {
-                // Get only first column token
-                var it = std.mem.splitAny(u8, line, "\t\n \r");
-                if (it.next()) |token| {
-                    if (token.len == 0) continue;
-
-                    // Insert a token into the vocab
-                    const new_token = try Allocator.dupe(self.arena.allocator(), u8, token);
-                    try self.vocab.append(self.allocator, new_token);
-                }
-            }
-        }
-
-        pub fn count(self: *Self, file_name: []const u8) !void {
-            // Initialize hash map
-            for (self.vocab.items) |token| {
-                try self.token_freq.put(token, 0);
-            }
-
+        pub fn load(self: *Self, file_name: []const u8) !void {
             var input = try filesystem.ReadableFile(1 << 20).init(file_name);
             defer input.deinit();
 
             while (try input.readLine('\n')) |line| {
                 var it = std.mem.splitAny(u8, line, " ");
-                while (it.next()) |token| {
-                    if (token.len == 0) continue;
+                while (it.next()) |id| {
+                    // if (token.len == 0) continue;
+                    const token_id = try std.fmt.parseInt(usize, id, 10);
 
-                    if (self.token_freq.getPtr(token)) |ptr| {
+                    if (self.token_freq.getPtr(token_id)) |ptr| {
                         ptr.* += 1;
                     } else {
-                        self.unk += 1;
+                        try self.token_freq.put(token_id, 1);
                     }
                 }
             }
@@ -94,7 +73,7 @@ pub fn ZipferImpl(comptime T: type) type {
             var i: usize = 0;
             while (it.next()) |kv| : (i += 1) {
                 self.zipf.set(i, .{
-                    .token = kv.key_ptr.*,
+                    .token_id = kv.key_ptr.*,
                     .rank = undefined,
                     .freq = kv.value_ptr.*,
                     .log_rank = undefined,
@@ -119,7 +98,7 @@ pub fn ZipferImpl(comptime T: type) type {
         }
 
         pub fn eval(self: *Self, file_name_or_null: ?[]const u8) !void {
-            if (file_name_or_null) |file_name| try self.count(file_name) else {
+            if (file_name_or_null) |file_name| try self.load(file_name) else {
                 if (self.token_freq.count() == 0) return error.FileIsNull;
             }
 
@@ -178,11 +157,11 @@ pub fn ZipferImpl(comptime T: type) type {
             // Write tokens info to a file
             var tokens_file = try dir.createFile("tokens.tsv", .{});
             var tokens_writer = tokens_file.writer(&file_buffer);
-            try tokens_writer.interface.print("token\trank\tfreq\tlog_rank\tlog_freq\n", .{});
+            try tokens_writer.interface.print("token_id\trank\tfreq\tlog_rank\tlog_freq\n", .{});
 
             for (0..self.tail) |i| {
                 const tmp = self.zipf.get(i);
-                try tokens_writer.interface.print("{s}\t{}\t{}\t{}\t{}\n", .{ tmp.token, tmp.rank, tmp.freq, tmp.log_rank, tmp.log_freq });
+                try tokens_writer.interface.print("{}\t{}\t{}\t{}\t{}\n", .{ tmp.token_id, tmp.rank, tmp.freq, tmp.log_rank, tmp.log_freq });
             }
             try tokens_writer.interface.flush();
 

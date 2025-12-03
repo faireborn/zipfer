@@ -1,6 +1,6 @@
 pub fn Zipf(comptime T: type) type {
     return struct {
-        token: []const u8,
+        token_id: usize,
         rank: usize,
         freq: usize,
         log_rank: T,
