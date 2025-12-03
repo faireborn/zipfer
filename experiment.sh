@@ -1,4 +1,78 @@
 #! /bin/bash
 
-spm_train --input=./data/minipile/data/minipile.txt --model_prefix=unigram_10k --vocab_size=10000 --input_sentence_size=1000000 --shuffle_input_sentence=true
-spm_encode --model=unigram_10k.model --input=./data/minipile/data/minipile.txt --output=./data/minipile/data/encoded/unigram_10k.txt
+ALGORITHM_LIST=(
+  "unigram"
+  "bpe"
+)
+
+VOCAB_SIZE_LIST=(
+  "10000"
+  "20000"
+  "30000"
+  "40000"
+  "50000"
+  "60000"
+  "70000"
+  "80000"
+  "90000"
+  "100000"
+)
+
+TRAINED_DIR=./data/minipile/data/trained
+ENCODED_DIR=./data/minipile/data/encoded
+RESULTS_DIR=./results
+
+mkdir -p \
+  ${TRAINED_DIR} \
+  ${ENCODED_DIR} \
+  ${RESULTS_DIR}
+
+printf "Training tokenizers...\n"
+
+for ALGORITHM in "${ALGORITHM_LIST[@]}"; do
+  for VOCAB_SIZE in "${VOCAB_SIZE_LIST[@]}"; do
+
+    # Skip the training step since the tokenizer is already trained
+    [ -f "${TRAINED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}".model ] &&
+      [ -f "${TRAINED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}".vocab ] &&
+      continue
+
+    ./tokenizer_train.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} ||
+      {
+        echo "Error while training tokenizers!"
+        exit 1
+      }
+  done
+done
+
+printf "\n\nTokenizing the corpus...\n"
+for ALGORITHM in "${ALGORITHM_LIST[@]}"; do
+  for VOCAB_SIZE in "${VOCAB_SIZE_LIST[@]}"; do
+
+    # Skip the encoding step since the tokenizer has already tokenized the corpus
+    [ -f "${ENCODED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}".txt ] && continue
+
+    ./tokenizer_encode.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} ||
+      {
+        echo "Error while tokenizing the corpus!"
+        exit 1
+      }
+  done
+done
+
+printf "\n\nEvaluating tokenizers...\n"
+for ALGORITHM in "${ALGORITHM_LIST[@]}"; do
+  for VOCAB_SIZE in "${VOCAB_SIZE_LIST[@]}"; do
+
+    # Skip the evaluating step since the tokenizer is already evaluated
+    [ -d "${RESULTS_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}" ] && continue
+
+    ./zipfer.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} ||
+      {
+        echo "Error while evaluating tokenizers!"
+        exit 1
+      }
+  done
+done
+
+printf "\n\nDone!\n"
