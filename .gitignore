@@ -2,5 +2,7 @@
 zig-out/
 *.o
 tmp/
+trained/
+encoded/
 results/
 data/
