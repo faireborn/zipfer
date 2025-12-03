@@ -9,5 +9,5 @@ zig build --release=fast
 ## Usage
 
 ```bash
-zipfer --target=encoded.txt --output=output.tsv
+zipfer --target=encoded.txt --output=output_directory
 ```
