@@ -19,7 +19,6 @@ pub fn ZipferImpl(comptime T: type) type {
         allocator: Allocator,
         arena: ArenaAllocator,
         vocab: ArrayList([]const u8),
-        unk: usize,
         token_freq: std.AutoHashMap(usize, usize),
         zipf: MultiArrayList(Zipf(T)),
         tail: usize, // use only zipf[0..tail] and discard the rest
@@ -32,7 +31,6 @@ pub fn ZipferImpl(comptime T: type) type {
                 .allocator = allocator,
                 .arena = ArenaAllocator.init(allocator),
                 .vocab = .empty,
-                .unk = 0,
                 .token_freq = std.AutoHashMap(usize, usize).init(allocator),
                 .zipf = .empty,
                 .tail = 0,
@@ -48,20 +46,19 @@ pub fn ZipferImpl(comptime T: type) type {
         }
 
         pub fn load(self: *Self, file_name: []const u8) !void {
-            var input = try filesystem.ReadableFile(1 << 20).init(file_name);
+            var input = try filesystem.ReadableFile(1 << 22).init(file_name);
             defer input.deinit();
 
             while (try input.readLine('\n')) |line| {
                 var it = std.mem.splitAny(u8, line, " ");
                 while (it.next()) |id| {
-                    // if (token.len == 0) continue;
-                    const token_id = try std.fmt.parseInt(usize, id, 10);
-
-                    if (self.token_freq.getPtr(token_id)) |ptr| {
-                        ptr.* += 1;
-                    } else {
-                        try self.token_freq.put(token_id, 1);
-                    }
+                    if (std.fmt.parseInt(usize, id, 10)) |token_id| {
+                        if (self.token_freq.getPtr(token_id)) |ptr| {
+                            ptr.* += 1;
+                        } else {
+                            try self.token_freq.put(token_id, 1);
+                        }
+                    } else |_| continue;
                 }
             }
 
@@ -164,14 +161,6 @@ pub fn ZipferImpl(comptime T: type) type {
                 try tokens_writer.interface.print("{}\t{}\t{}\t{}\t{}\n", .{ tmp.token_id, tmp.rank, tmp.freq, tmp.log_rank, tmp.log_freq });
             }
             try tokens_writer.interface.flush();
-
-            // Write some extra info to a file
-            var info_file = try dir.createFile("info.txt", .{});
-            var info_writer = info_file.writer(&file_buffer);
-            if (self.unk > 0) {
-                try info_writer.interface.print("Unknown tokens count = {}\n", .{self.unk});
-            }
-            try info_writer.interface.flush();
 
             // If result is not null, create a file and write a result to the file
             if (self.result) |result| {
