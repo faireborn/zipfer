@@ -20,6 +20,5 @@ while [[ $# -gt 0 ]]; do
 done
 
 ./zig-out/bin/zipfer \
-  --vocab=./data/minipile/data/trained/"${ALGORITHM}"_"${VOCAB_SIZE}".vocab \
   --target=./data/minipile/data/encoded/"${ALGORITHM}"_"${VOCAB_SIZE}".txt \
   --output=./results/"${ALGORITHM}"_"${VOCAB_SIZE}"

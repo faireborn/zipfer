@@ -22,4 +22,5 @@ done
 spm_encode \
   --model=./data/minipile/data/trained/"${ALGORITHM}"_"${VOCAB_SIZE}".model \
   --input=./data/minipile/data/minipile.txt \
-  --output=./data/minipile/data/encoded/"${ALGORITHM}"_"${VOCAB_SIZE}".txt
+  --output=./data/minipile/data/encoded/"${ALGORITHM}"_"${VOCAB_SIZE}".txt \
+  --output_format=id
