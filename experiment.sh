@@ -8,8 +8,8 @@ VOCAB_SIZE_LIST=(
   "50000"
 )
 
-TRAINED_DIR=./data/minipile/data/trained
-ENCODED_DIR=./data/minipile/data/encoded
+TRAINED_DIR=./trained
+ENCODED_DIR=./encoded
 RESULTS_DIR=./results
 INPUT=./data/minipile/data/minipile.txt
 
