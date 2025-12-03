@@ -12,6 +12,18 @@ while [[ $# -gt 0 ]]; do
     shift
     shift
     ;;
+
+  -i | --input)
+    INPUT="$2"
+    shift
+    shift
+    ;;
+  -t | --trained_dir)
+    TRAINED_DIR="$2"
+    shift
+    shift
+    ;;
+
   -* | --*)
     echo "Unknown option $1"
     exit 1
@@ -20,8 +32,8 @@ while [[ $# -gt 0 ]]; do
 done
 
 spm_train \
-  --input=./data/minipile/data/minipile.txt \
-  --model_prefix=./data/minipile/data/trained/"${ALGORITHM}"_"${VOCAB_SIZE}" \
+  --input=${INPUT} \
+  --model_prefix="${TRAINED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}" \
   --model_type="${ALGORITHM}" \
   --vocab_size="${VOCAB_SIZE}" \
   --input_sentence_size=1000000 \

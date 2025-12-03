@@ -12,6 +12,16 @@ while [[ $# -gt 0 ]]; do
     shift
     shift
     ;;
+  -e | --encoded_dir)
+    ENCODED_DIR="$2"
+    shift
+    shift
+    ;;
+  -r | --results_dir)
+    RESULTS_DIR="$2"
+    shift
+    shift
+    ;;
   -* | --*)
     echo "Unknown option $1"
     exit 1
@@ -20,5 +30,5 @@ while [[ $# -gt 0 ]]; do
 done
 
 ./zig-out/bin/zipfer \
-  --target=./data/minipile/data/encoded/"${ALGORITHM}"_"${VOCAB_SIZE}".txt \
-  --output=./results/"${ALGORITHM}"_"${VOCAB_SIZE}"
+  --target="${ENCODED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}".txt \
+  --output="${RESULTS_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}"

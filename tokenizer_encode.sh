@@ -12,6 +12,21 @@ while [[ $# -gt 0 ]]; do
     shift
     shift
     ;;
+  -i | --input)
+    INPUT="$2"
+    shift
+    shift
+    ;;
+  -t | --trained_dir)
+    TRAINED_DIR="$2"
+    shift
+    shift
+    ;;
+  -e | --encoded_dir)
+    ENCODED_DIR="$2"
+    shift
+    shift
+    ;;
   -* | --*)
     echo "Unknown option $1"
     exit 1
@@ -20,7 +35,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 spm_encode \
-  --model=./data/minipile/data/trained/"${ALGORITHM}"_"${VOCAB_SIZE}".model \
-  --input=./data/minipile/data/minipile.txt \
-  --output=./data/minipile/data/encoded/"${ALGORITHM}"_"${VOCAB_SIZE}".txt \
+  --model="${TRAINED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}".model \
+  --input="${INPUT}" \
+  --output="${ENCODED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}".txt \
   --output_format=id

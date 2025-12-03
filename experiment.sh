@@ -2,25 +2,16 @@
 
 ALGORITHM_LIST=(
   "unigram"
-  "bpe"
 )
 
 VOCAB_SIZE_LIST=(
-  "10000"
-  "20000"
-  "30000"
-  "40000"
   "50000"
-  "60000"
-  "70000"
-  "80000"
-  "90000"
-  "100000"
 )
 
 TRAINED_DIR=./data/minipile/data/trained
 ENCODED_DIR=./data/minipile/data/encoded
 RESULTS_DIR=./results
+INPUT=./data/minipile/data/minipile.txt
 
 mkdir -p \
   ${TRAINED_DIR} \
@@ -37,7 +28,7 @@ for ALGORITHM in "${ALGORITHM_LIST[@]}"; do
       [ -f "${TRAINED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}".vocab ] &&
       continue
 
-    ./tokenizer_train.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} ||
+    ./tokenizer_train.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} -i ${INPUT} -t ${TRAINED_DIR} ||
       {
         echo "Error while training tokenizers!"
         exit 1
@@ -52,7 +43,7 @@ for ALGORITHM in "${ALGORITHM_LIST[@]}"; do
     # Skip the encoding step since the tokenizer has already tokenized the corpus
     [ -f "${ENCODED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}".txt ] && continue
 
-    ./tokenizer_encode.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} ||
+    ./tokenizer_encode.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} -i ${INPUT} -t ${TRAINED_DIR} -e ${ENCODED_DIR} ||
       {
         echo "Error while tokenizing the corpus!"
         exit 1
@@ -67,7 +58,7 @@ for ALGORITHM in "${ALGORITHM_LIST[@]}"; do
     # Skip the evaluating step since the tokenizer is already evaluated
     [ -d "${RESULTS_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}" ] && continue
 
-    ./zipfer.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} ||
+    ./zipfer.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} -e ${ENCODED_DIR} -r ${RESULTS_DIR} ||
       {
         echo "Error while evaluating tokenizers!"
         exit 1
