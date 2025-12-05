@@ -1,6 +1,8 @@
 const Token = t.Token;
 const Zipf = t.Zipf;
 const ZipferResult = t.ZipferResult;
+const StringUtil = util.StringUtil;
+const Stats = util.Stats;
 const t = @import("type.zig");
 const lr = @import("linear_regression.zig");
 const util = @import("util.zig");
@@ -21,6 +23,7 @@ pub fn ZipferImpl(comptime T: type) type {
         arena: ArenaAllocator,
         num_sentences: usize,
         num_tokens: usize,
+        num_characters: usize,
         tokens: MultiArrayList(Token),
         zipf: MultiArrayList(Zipf(T)),
         tail: usize, // use only zipf[0..tail] and discard the rest
@@ -34,6 +37,7 @@ pub fn ZipferImpl(comptime T: type) type {
                 .arena = ArenaAllocator.init(allocator),
                 .num_sentences = 0,
                 .num_tokens = 0,
+                .num_characters = 0,
                 .tokens = .empty,
                 .zipf = .empty,
                 .tail = 0,
@@ -47,14 +51,24 @@ pub fn ZipferImpl(comptime T: type) type {
             self.zipf.deinit(self.allocator);
         }
 
-        pub fn load(self: *Self, file_name: []const u8) !void {
-            var input = try filesystem.ReadableFile(1 << 22).init(file_name);
+        pub fn load(self: *Self, vocab_file: []const u8, target_file: []const u8) !void {
+            var vocab = try filesystem.ReadableFile(1 << 8).init(vocab_file);
+            defer vocab.deinit();
+
+            var input = try filesystem.ReadableFile(1 << 22).init(target_file);
             defer input.deinit();
 
-            try self.tokens.resize(self.allocator, 100000);
+            while (try vocab.readLine('\n')) |line| {
+                var it = std.mem.splitAny(u8, line, "\t ");
+                const token = it.next() orelse "";
+                try self.tokens.append(self.allocator, .{
+                    .token = token,
+                    .length = StringUtil.strLen(token),
+                    .freq = 0,
+                });
+            }
 
             const sliced_tokens = self.tokens.slice();
-            @memset(sliced_tokens.items(.freq), 0);
 
             while (try input.readLine('\n')) |line| {
                 self.num_sentences += 1;
@@ -64,11 +78,14 @@ pub fn ZipferImpl(comptime T: type) type {
                     if (std.fmt.parseInt(usize, id, 10)) |token_id| {
                         sliced_tokens.items(.freq)[token_id] += 1;
                         self.num_tokens += 1;
-                        if (sliced_tokens.items(.freq)[token_id] == 0) {
-                            _ = null;
-                        }
                     } else |_| continue;
                 }
+            }
+
+            // count characters
+            for (0..self.tokens.len) |token_id| {
+                const tmp = self.tokens.get(token_id);
+                self.num_characters += tmp.length * tmp.freq;
             }
 
             // Create MultiArrayList of `Zipf`
@@ -100,11 +117,7 @@ pub fn ZipferImpl(comptime T: type) type {
             }
         }
 
-        pub fn eval(self: *Self, file_name_or_null: ?[]const u8) !void {
-            if (file_name_or_null) |file_name| try self.load(file_name) else {
-                if (self.tokens.len == 0) return error.FileIsNull;
-            }
-
+        pub fn eval(self: *Self) !void {
             self.tail = self.zipf.len;
 
             const sliced = self.zipf.slice();
@@ -149,8 +162,9 @@ pub fn ZipferImpl(comptime T: type) type {
                 .R_squared = if (lr_result.r) |r| r * r else null,
                 .slope = slope,
                 .intercept = intercept,
-                .mae = util.mean(T, absolute_errors),
+                .mae = Stats.mean(T, absolute_errors),
                 .tokens_per_sent = @as(T, @floatFromInt(self.num_tokens)) / @as(T, @floatFromInt(self.num_sentences)),
+                .characters_per_token = @as(T, @floatFromInt(self.num_characters)) / @as(T, @floatFromInt(self.num_tokens)),
             };
         }
 
@@ -166,16 +180,19 @@ pub fn ZipferImpl(comptime T: type) type {
             // Write tokens info to a file
             var tokens_file = try dir.createFile("tokens.tsv", .{});
             var tokens_writer = tokens_file.writer(&file_buffer);
-            try tokens_writer.interface.print("token_id\trank\tfreq\tlog_rank\tlog_freq\n", .{});
+            try tokens_writer.interface.print("token_id\trank\tfreq\tlog_rank\tlog_freq\tlength\ttoken\n", .{});
 
             for (0..self.tail) |i| {
-                const tmp = self.zipf.get(i);
-                try tokens_writer.interface.print("{}\t{}\t{}\t{}\t{}\n", .{
-                    tmp.token_id,
-                    tmp.rank,
-                    tmp.freq,
-                    tmp.log_rank,
-                    tmp.log_freq,
+                const tmp_zipf = self.zipf.get(i);
+                const tmp_token = self.tokens.get(tmp_zipf.token_id);
+
+                try tokens_writer.interface.print("{}\t{}\t{}\t{}\t{}\t{}\n", .{
+                    tmp_zipf.token_id,
+                    tmp_zipf.rank,
+                    tmp_zipf.freq,
+                    tmp_zipf.log_rank,
+                    tmp_zipf.log_freq,
+                    tmp_token.length,
                 });
             }
             try tokens_writer.interface.flush();
@@ -184,21 +201,23 @@ pub fn ZipferImpl(comptime T: type) type {
             if (self.result) |result| {
                 var result_file = try dir.createFile("result.tsv", .{});
                 var result_writer = result_file.writer(&file_buffer);
-                try result_writer.interface.print("R^2\tslope\tintercept\tMAE\t#tokens/sent\n", .{});
+                try result_writer.interface.print("R^2\tslope\tintercept\tMAE\t#tokens/sent\t#chars/token\n", .{});
                 if (self.result.?.R_squared) |R_squared| {
-                    try result_writer.interface.print("{}\t{}\t{}\t{}\t{}", .{
+                    try result_writer.interface.print("{}\t{}\t{}\t{}\t{}\t{}", .{
                         R_squared,
                         result.slope,
                         result.intercept,
                         result.mae,
                         result.tokens_per_sent,
+                        result.characters_per_token,
                     });
                 } else {
-                    try result_writer.interface.print("null\t{}\t{}\t{}\t{}", .{
+                    try result_writer.interface.print("null\t{}\t{}\t{}\t{}\t{}", .{
                         result.slope,
                         result.intercept,
                         result.mae,
                         result.tokens_per_sent,
+                        result.characters_per_token,
                     });
                 }
                 try result_writer.interface.flush();

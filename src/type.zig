@@ -1,4 +1,5 @@
 pub const Token = struct {
+    token: []const u8,
     length: usize,
     freq: usize,
 };
@@ -20,5 +21,6 @@ pub fn ZipferResult(comptime T: type) type {
         intercept: T,
         mae: T,
         tokens_per_sent: T,
+        characters_per_token: T,
     };
 }

@@ -89,6 +89,7 @@ pub fn main() !void {
     var zipfer = Zipfer.init(allocator);
     defer zipfer.deinit();
 
-    try zipfer.eval(options.target.?);
+    try zipfer.load(options.vocab.?, options.target.?);
+    try zipfer.eval();
     try zipfer.write(options.output.?);
 }

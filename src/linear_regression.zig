@@ -1,5 +1,5 @@
 const std = @import("std");
-const util = @import("util.zig");
+const Stats = @import("util.zig").Stats;
 
 pub fn LRResult(comptime T: type) type {
     return struct {
@@ -33,9 +33,9 @@ pub fn model(comptime T: type, xs: []const T, ys: []const T) !LRResult(T) {
         }
     }
 
-    const x_mean = util.mean(T, xs);
-    const y_mean = util.mean(T, ys);
-    const cov = try util.cov(T, xs, ys);
+    const x_mean = Stats.mean(T, xs);
+    const y_mean = Stats.mean(T, ys);
+    const cov = try Stats.cov(T, xs, ys);
 
     var result: LRResult(T) = .{
         .r = undefined,
@@ -103,5 +103,5 @@ test "expect error" {
 }
 
 test {
-    _ = util;
+    _ = Stats;
 }
