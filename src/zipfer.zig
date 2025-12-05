@@ -18,6 +18,7 @@ pub fn ZipferImpl(comptime T: type) type {
     return struct {
         allocator: Allocator,
         arena: ArenaAllocator,
+        num_tokens: usize,
         token_freq: std.AutoHashMap(usize, usize),
         zipf: MultiArrayList(Zipf(T)),
         tail: usize, // use only zipf[0..tail] and discard the rest
@@ -29,6 +30,7 @@ pub fn ZipferImpl(comptime T: type) type {
             return .{
                 .allocator = allocator,
                 .arena = ArenaAllocator.init(allocator),
+                .num_tokens = 0,
                 .token_freq = std.AutoHashMap(usize, usize).init(allocator),
                 .zipf = .empty,
                 .tail = 0,
@@ -52,6 +54,7 @@ pub fn ZipferImpl(comptime T: type) type {
                     if (std.fmt.parseInt(usize, id, 10)) |token_id| {
                         if (self.token_freq.getPtr(token_id)) |ptr| {
                             ptr.* += 1;
+                            self.num_tokens += 1;
                         } else {
                             try self.token_freq.put(token_id, 1);
                         }
