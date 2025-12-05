@@ -18,6 +18,7 @@ pub fn ZipferImpl(comptime T: type) type {
     return struct {
         allocator: Allocator,
         arena: ArenaAllocator,
+        num_sentences: usize,
         num_tokens: usize,
         token_freq: std.AutoHashMap(usize, usize),
         zipf: MultiArrayList(Zipf(T)),
@@ -30,6 +31,7 @@ pub fn ZipferImpl(comptime T: type) type {
             return .{
                 .allocator = allocator,
                 .arena = ArenaAllocator.init(allocator),
+                .num_sentences = 0,
                 .num_tokens = 0,
                 .token_freq = std.AutoHashMap(usize, usize).init(allocator),
                 .zipf = .empty,
@@ -49,6 +51,8 @@ pub fn ZipferImpl(comptime T: type) type {
             defer input.deinit();
 
             while (try input.readLine('\n')) |line| {
+                self.num_sentences += 1;
+
                 var it = std.mem.splitAny(u8, line, " ");
                 while (it.next()) |id| {
                     if (std.fmt.parseInt(usize, id, 10)) |token_id| {
@@ -139,7 +143,13 @@ pub fn ZipferImpl(comptime T: type) type {
             }
 
             // Set results (R^2, slope, intercept, MAE)
-            self.result = .{ .R_squared = if (lr_result.r) |r| r * r else null, .slope = slope, .intercept = intercept, .mae = util.mean(T, absolute_errors) };
+            self.result = .{
+                .R_squared = if (lr_result.r) |r| r * r else null,
+                .slope = slope,
+                .intercept = intercept,
+                .mae = util.mean(T, absolute_errors),
+                .tokens_per_sent = @as(T, @floatFromInt(self.num_tokens)) / @as(T, @floatFromInt(self.num_sentences)),
+            };
         }
 
         pub fn write(self: Self, dir_name: []const u8) !void {
@@ -158,7 +168,13 @@ pub fn ZipferImpl(comptime T: type) type {
 
             for (0..self.tail) |i| {
                 const tmp = self.zipf.get(i);
-                try tokens_writer.interface.print("{}\t{}\t{}\t{}\t{}\n", .{ tmp.token_id, tmp.rank, tmp.freq, tmp.log_rank, tmp.log_freq });
+                try tokens_writer.interface.print("{}\t{}\t{}\t{}\t{}\n", .{
+                    tmp.token_id,
+                    tmp.rank,
+                    tmp.freq,
+                    tmp.log_rank,
+                    tmp.log_freq,
+                });
             }
             try tokens_writer.interface.flush();
 
@@ -166,11 +182,22 @@ pub fn ZipferImpl(comptime T: type) type {
             if (self.result) |result| {
                 var result_file = try dir.createFile("result.tsv", .{});
                 var result_writer = result_file.writer(&file_buffer);
-                try result_writer.interface.print("R^2\tslope\tintercept\tMAE\n", .{});
+                try result_writer.interface.print("R^2\tslope\tintercept\tMAE\t#tokens/sent\n", .{});
                 if (self.result.?.R_squared) |R_squared| {
-                    try result_writer.interface.print("{}\t{}\t{}\t{}", .{ R_squared, result.slope, result.intercept, result.mae });
+                    try result_writer.interface.print("{}\t{}\t{}\t{}\t{}", .{
+                        R_squared,
+                        result.slope,
+                        result.intercept,
+                        result.mae,
+                        result.tokens_per_sent,
+                    });
                 } else {
-                    try result_writer.interface.print("null\t{}\t{}\t{}", .{ result.slope, result.intercept, result.mae });
+                    try result_writer.interface.print("null\t{}\t{}\t{}\t{}", .{
+                        result.slope,
+                        result.intercept,
+                        result.mae,
+                        result.tokens_per_sent,
+                    });
                 }
                 try result_writer.interface.flush();
             } else {

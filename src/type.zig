@@ -14,5 +14,6 @@ pub fn ZipferResult(comptime T: type) type {
         slope: T,
         intercept: T,
         mae: T,
+        tokens_per_sent: T,
     };
 }
