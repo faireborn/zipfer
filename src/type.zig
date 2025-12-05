@@ -1,3 +1,8 @@
+pub const Token = struct {
+    length: usize,
+    freq: usize,
+};
+
 pub fn Zipf(comptime T: type) type {
     return struct {
         token_id: usize,

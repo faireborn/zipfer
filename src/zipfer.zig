@@ -1,3 +1,4 @@
+const Token = t.Token;
 const Zipf = t.Zipf;
 const ZipferResult = t.ZipferResult;
 const t = @import("type.zig");
@@ -20,7 +21,7 @@ pub fn ZipferImpl(comptime T: type) type {
         arena: ArenaAllocator,
         num_sentences: usize,
         num_tokens: usize,
-        token_freq: std.AutoHashMap(usize, usize),
+        tokens: MultiArrayList(Token),
         zipf: MultiArrayList(Zipf(T)),
         tail: usize, // use only zipf[0..tail] and discard the rest
         result: ?ZipferResult(T),
@@ -33,7 +34,7 @@ pub fn ZipferImpl(comptime T: type) type {
                 .arena = ArenaAllocator.init(allocator),
                 .num_sentences = 0,
                 .num_tokens = 0,
-                .token_freq = std.AutoHashMap(usize, usize).init(allocator),
+                .tokens = .empty,
                 .zipf = .empty,
                 .tail = 0,
                 .result = null,
@@ -42,7 +43,7 @@ pub fn ZipferImpl(comptime T: type) type {
 
         pub fn deinit(self: *Self) void {
             self.arena.deinit();
-            self.token_freq.deinit();
+            self.tokens.deinit(self.allocator);
             self.zipf.deinit(self.allocator);
         }
 
@@ -50,33 +51,34 @@ pub fn ZipferImpl(comptime T: type) type {
             var input = try filesystem.ReadableFile(1 << 22).init(file_name);
             defer input.deinit();
 
+            try self.tokens.resize(self.allocator, 100000);
+
+            const sliced_tokens = self.tokens.slice();
+            @memset(sliced_tokens.items(.freq), 0);
+
             while (try input.readLine('\n')) |line| {
                 self.num_sentences += 1;
 
                 var it = std.mem.splitAny(u8, line, " ");
                 while (it.next()) |id| {
                     if (std.fmt.parseInt(usize, id, 10)) |token_id| {
-                        if (self.token_freq.getPtr(token_id)) |ptr| {
-                            ptr.* += 1;
-                            self.num_tokens += 1;
-                        } else {
-                            try self.token_freq.put(token_id, 1);
+                        sliced_tokens.items(.freq)[token_id] += 1;
+                        self.num_tokens += 1;
+                        if (sliced_tokens.items(.freq)[token_id] == 0) {
+                            _ = null;
                         }
                     } else |_| continue;
                 }
             }
 
             // Create MultiArrayList of `Zipf`
-            try self.zipf.resize(self.allocator, self.token_freq.count());
+            try self.zipf.resize(self.allocator, self.tokens.len);
 
-            // Set token and freq to zipf
-            var it = self.token_freq.iterator();
-            var i: usize = 0;
-            while (it.next()) |kv| : (i += 1) {
-                self.zipf.set(i, .{
-                    .token_id = kv.key_ptr.*,
+            for (0..self.zipf.len) |token_id| {
+                self.zipf.set(token_id, .{
+                    .token_id = token_id,
                     .rank = undefined,
-                    .freq = kv.value_ptr.*,
+                    .freq = self.tokens.get(token_id).freq,
                     .log_rank = undefined,
                     .log_freq = undefined,
                 });
@@ -100,7 +102,7 @@ pub fn ZipferImpl(comptime T: type) type {
 
         pub fn eval(self: *Self, file_name_or_null: ?[]const u8) !void {
             if (file_name_or_null) |file_name| try self.load(file_name) else {
-                if (self.token_freq.count() == 0) return error.FileIsNull;
+                if (self.tokens.len == 0) return error.FileIsNull;
             }
 
             self.tail = self.zipf.len;

@@ -8,16 +8,19 @@ const usage_text =
     \\
     \\Options:
     \\ --help      show help (This message)
+    \\ --vocab     vocabrary file
     \\ --target    target file
     \\ --output    output directory
     \\
 ;
 
 const help: []const u8 = "--help";
+const vocab: []const u8 = "--vocab";
 const target: []const u8 = "--target";
 const output: []const u8 = "--output";
 
 const Options = struct {
+    vocab: ?[]const u8,
     target: ?[]const u8,
     output: ?[]const u8,
 };
@@ -50,7 +53,7 @@ pub fn main() !void {
         std.process.exit(1);
     }
 
-    var options: Options = .{ .target = null, .output = null };
+    var options: Options = .{ .vocab = null, .target = null, .output = null };
 
     // Arg parse
     var arg_i: usize = 1;
@@ -62,6 +65,9 @@ pub fn main() !void {
             try stdout_w.writeAll(usage_text);
             try stdout_w.flush();
             return std.process.cleanExit();
+        } else if (std.mem.startsWith(u8, arg, vocab)) {
+            // --vocab
+            parseFlag(arg, vocab, &(options.vocab));
         } else if (std.mem.startsWith(u8, arg, target)) {
             // --target
             parseFlag(arg, target, &(options.target));
@@ -75,7 +81,7 @@ pub fn main() !void {
     }
 
     // Check arguments
-    if (options.target == null or options.output == null) {
+    if (options.vocab == null or options.target == null or options.output == null) {
         std.log.err("Required to set all options:\n{s}\n", .{usage_text});
         std.process.exit(1);
     }
