@@ -12,6 +12,11 @@ while [[ $# -gt 0 ]]; do
     shift
     shift
     ;;
+  -t | --trained_dir)
+    TRAINED_DIR="$2"
+    shift
+    shift
+    ;;
   -e | --encoded_dir)
     ENCODED_DIR="$2"
     shift
@@ -30,5 +35,6 @@ while [[ $# -gt 0 ]]; do
 done
 
 ./zig-out/bin/zipfer \
+  --vocab="${TRAINED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}".vocab \
   --target="${ENCODED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}".txt \
   --output="${RESULTS_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}"

@@ -75,7 +75,7 @@ for ALGORITHM in "${ALGORITHM_LIST[@]}"; do
     # Skip the evaluating step since the tokenizer is already evaluated
     [ -d "${RESULTS_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}" ] && continue
 
-    EVALUATING_JOBS+=("./zipfer.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} -e ${ENCODED_DIR} -r ${RESULTS_DIR}")
+    EVALUATING_JOBS+=("./zipfer.sh -a ${ALGORITHM} -s ${VOCAB_SIZE} -t ${TRAINED_DIR} -e ${ENCODED_DIR} -r ${RESULTS_DIR}")
   done
 done
 
