@@ -1,5 +1,7 @@
 const std = @import("std");
 
+pub const k_unicode_error: u21 = 0xFFFD;
+
 pub const StringUtil = struct {
     pub fn oneCharLen(src: []const u8) usize {
         return "\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01\x02\x02\x03\x04"[(src[0] & 0xFF) >> 4];
@@ -8,11 +10,63 @@ pub const StringUtil = struct {
     pub fn strLen(string: []const u8) usize {
         var length: usize = 0;
         var begin: usize = 0;
-        while (begin < string.len) {
+        const end = string.len;
+        while (begin < end) {
             begin += oneCharLen(string[begin..]);
             length += 1;
         }
         return length;
+    }
+
+    pub fn decodeUTF8(utf8: []const u8) struct { u21, usize } {
+        const len = utf8.len;
+
+        // If string is null
+        if (len == 0) return .{ 0, 1 };
+
+        if (utf8[0] < 0x80) {
+            return .{ utf8[0], 1 };
+        } else if (len >= 2 and (utf8[0] & 0xE0) == 0xC0) {
+            const cp: u21 = ((@as(u21, (utf8[0] & 0x1F)) << 6) | ((utf8[1] & 0x3F)));
+            if (isTrailByte(utf8[1]) and cp >= 0x0080 and isValidCodepoint(cp)) {
+                return .{ cp, 2 };
+            }
+        } else if (len >= 3 and (utf8[0] & 0xF0) == 0xE0) {
+            const cp: u21 = ((@as(u21, (utf8[0] & 0x0F)) << 12) | (@as(u21, (utf8[1] & 0x3F)) << 6) | ((utf8[2] & 0x3F)));
+            if (isTrailByte(utf8[1]) and isTrailByte(utf8[2]) and cp >= 0x0800 and isValidCodepoint(cp)) {
+                return .{ cp, 3 };
+            }
+        } else if (len >= 4 and (utf8[0] & 0xF8) == 0xF0) {
+            const cp: u21 = ((@as(u21, (utf8[0] & 0x07)) << 18) | (@as(u21, (utf8[1] & 0x3F)) << 12) | ((utf8[2] & 0x3F) << 6) | ((utf8[3] & 0x3F)));
+            if (isTrailByte(utf8[1]) and isTrailByte(utf8[2]) and isTrailByte(utf8[3]) and cp >= 0x10000 and isValidCodepoint(cp)) {
+                return .{ cp, 4 };
+            }
+        }
+
+        // Invalid UTF-8
+        return .{ k_unicode_error, 1 };
+    }
+
+    // Return (x & 0xC0) == 0x80;
+    // Trail bytes are always in [0x80, 0xBF], we can optimize:
+    pub fn isTrailByte(x: u8) bool {
+        return @as(i8, @bitCast(x)) < -0x40;
+    }
+
+    pub fn isValidCodepoint(c: u21) bool {
+        return (c < 0xD800) or (c >= 0xE000 and c <= 0x10FFFF);
+    }
+
+    pub fn isStructurallyValid(str: []const u8) bool {
+        var begin: usize = 0;
+        const end = str.len;
+        while (begin < end) {
+            const res = decodeUTF8(str);
+            if (res[0] == k_unicode_error and res[1] != 3) return false;
+            if (!isValidCodepoint(res[0])) return false;
+            begin += res[1];
+        }
+        return true;
     }
 };
 
@@ -95,6 +149,42 @@ test "strLen" {
     try std.testing.expectEqual(3, StringUtil.strLen("abc"));
     try std.testing.expectEqual(3, StringUtil.strLen("テスト"));
     try std.testing.expectEqual(7, StringUtil.strLen("これはtest"));
+}
+
+test "decodeUTF8" {
+    // Valid UTF-8
+    {
+        try std.testing.expectEqual(.{ 0, 1 }, StringUtil.decodeUTF8(""));
+        try std.testing.expectEqual(.{ 1, 1 }, StringUtil.decodeUTF8("\x01"));
+        try std.testing.expectEqual(.{ 0x7F, 1 }, StringUtil.decodeUTF8("\x7F"));
+        try std.testing.expectEqual(.{ 0x80, 2 }, StringUtil.decodeUTF8("\xC2\x80 "));
+        try std.testing.expectEqual(.{ 0x7FF, 2 }, StringUtil.decodeUTF8("\xDF\xBF "));
+        try std.testing.expectEqual(.{ 0x800, 3 }, StringUtil.decodeUTF8("\xE0\xA0\x80 "));
+        try std.testing.expectEqual(.{ 0x10000, 4 }, StringUtil.decodeUTF8("\xF0\x90\x80\x80 "));
+    }
+
+    // Invalid UTF-8
+    {
+        try std.testing.expectEqual(.{ k_unicode_error, 1 }, StringUtil.decodeUTF8("\xF7\xBF\xBF\xBF "));
+        try std.testing.expectEqual(.{ k_unicode_error, 1 }, StringUtil.decodeUTF8("\xF8\x88\x80\x80\x80 "));
+        try std.testing.expectEqual(.{ k_unicode_error, 1 }, StringUtil.decodeUTF8("\xFC\x84\x80\x80\x80\x80 "));
+
+        const k_invalid_data = [_][]const u8{
+            "\xC2", // must be 2byte.
+            "\xE0\xE0", // must be 3byte.
+            "\xFF", // BOM
+            "\xFE", // BOM
+        };
+
+        for (k_invalid_data) |bytes| {
+            try std.testing.expectEqual(.{ k_unicode_error, 1 }, StringUtil.decodeUTF8(bytes));
+            try std.testing.expect(!StringUtil.isStructurallyValid(bytes));
+        }
+
+        try std.testing.expectEqual(.{ k_unicode_error, 1 }, StringUtil.decodeUTF8("\xDF\xDF "));
+        try std.testing.expectEqual(.{ k_unicode_error, 1 }, StringUtil.decodeUTF8("\xE0\xE0\xE0 "));
+        try std.testing.expectEqual(.{ k_unicode_error, 1 }, StringUtil.decodeUTF8("\xF0\xF0\xF0\xFF "));
+    }
 }
 
 test "mean" {
