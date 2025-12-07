@@ -11,9 +11,8 @@ pub const StringUtil = struct {
         var length: usize = 0;
         var begin: usize = 0;
         const end = string.len;
-        while (begin < end) {
+        while (begin < end) : (length += 1) {
             begin += oneCharLen(string[begin..]);
-            length += 1;
         }
         return length;
     }

@@ -62,7 +62,7 @@ pub fn ZipferImpl(comptime T: type) type {
                 var it = std.mem.splitAny(u8, line, "\t ");
                 const token = it.next() orelse "";
                 try self.tokens.append(self.allocator, .{
-                    .token = token,
+                    .token = try Allocator.dupe(self.arena.allocator(), u8, token),
                     .length = StringUtil.strLen(token),
                     .freq = 0,
                 });
@@ -186,7 +186,7 @@ pub fn ZipferImpl(comptime T: type) type {
                 const tmp_zipf = self.zipf.get(i);
                 const tmp_token = self.tokens.get(tmp_zipf.token_id);
 
-                try tokens_writer.interface.print("{}\t{}\t{}\t{}\t{}\t{}\n", .{
+                try tokens_writer.interface.print("{}\t{}\t{}\t{}\t{}\t{}\t", .{
                     tmp_zipf.token_id,
                     tmp_zipf.rank,
                     tmp_zipf.freq,
@@ -194,6 +194,15 @@ pub fn ZipferImpl(comptime T: type) type {
                     tmp_zipf.log_freq,
                     tmp_token.length,
                 });
+
+                var begin: usize = 0;
+                const end = tmp_token.token.len;
+                while (begin < end) {
+                    const res = StringUtil.decodeUTF8(tmp_token.token[begin..]);
+                    try tokens_writer.interface.print("{u}", .{res[0]});
+                    begin += res[1];
+                }
+                try tokens_writer.interface.writeByte('\n');
             }
             try tokens_writer.interface.flush();
 
