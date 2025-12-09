@@ -82,4 +82,15 @@ done
 # start evaluating jobs
 printf "%s\n" "${EVALUATING_JOBS[@]}" | xargs -P "$(nproc)" -I{} bash -c "{}"
 
+for ALGORITHM in "${ALGORITHM_LIST[@]}"; do
+  for VOCAB_SIZE in "${VOCAB_SIZE_LIST[@]}"; do
+    if [ ${VOCAB_SIZE} == ${VOCAB_SIZE_LIST[0]} ]; then
+      HEADER=$(awk 'NR==1' "${RESULTS_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}"/result.tsv)
+      printf "vocab_size\t${HEADER}\n" >"${RESULTS_DIR}"/"${ALGORITHM}".tsv
+    fi
+    RESULT=$(awk 'NR==2' "${RESULTS_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}"/result.tsv)
+    printf "${VOCAB_SIZE}\t${RESULT}\n" >>"${RESULTS_DIR}"/"${ALGORITHM}".tsv
+  done
+done
+
 printf "\n\nDone!\n"
