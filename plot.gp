@@ -24,3 +24,5 @@ labels = "BPE ULM Char Word"
 plot for [i=1:4] \
   sprintf("./results/%s.tsv", word(files,i)) \
   using "vocab_size":"R^2" with linespoints ls i title word(labels,i)
+
+set output
