@@ -4,7 +4,6 @@ set datafile separator "\t"
 set datafile columnheaders
 
 set grid
-set key right top
 set key spacing 1.2
 set rmargin 6
 
@@ -16,43 +15,49 @@ set style line 4 lw 2 pt 11
 files  = "bpe unigram word char"
 labels = "BPE ULM Word Char"
 
-set output "./results/r2.png"
+set output results_dir."/r2.png"
+
+set key right bottom
 
 set title "R^2 Score vs Vocab Size"
 set xlabel "Vocabulary Size"
 set ylabel "R^2 Score"
 
 plot for [i=1:4] \
-  sprintf("./results/%s.tsv", word(files,i)) \
+  sprintf(results_dir."/%s.tsv", word(files,i)) \
   using "vocab_size":"R^2" with linespoints ls i title word(labels,i)
 
 set output
 
-set output "./results/mae.png"
+set output results_dir."/mae.png"
+
+set key right top
 
 set title "MAE vs Vocab Size"
 set xlabel "Vocabulary Size"
 set ylabel "MAE"
 
 plot for [i=1:4] \
-  sprintf("./results/%s.tsv", word(files,i)) \
+  sprintf(results_dir."/%s.tsv", word(files,i)) \
   using "vocab_size":"MAE" with linespoints ls i title word(labels,i)
 
 set output
 
-set output "./results/tokens_per_sent.png"
+set output results_dir."/tokens_per_sent.png"
+
+set key right top
 
 set title "#tokens/sent vs Vocab Size"
 set xlabel "Vocabulary Size"
 set ylabel "#tokens/sent"
 
 plot for [i=1:3] \
-  sprintf("./results/%s.tsv", word(files,i)) \
+  sprintf(results_dir."/%s.tsv", word(files,i)) \
   using "vocab_size":"#tokens/sent" with linespoints ls i title word(labels,i)
 
 set output
 
-set output "./results/chars_per_token.png"
+set output results_dir."/chars_per_token.png"
 
 set key right bottom
 
@@ -61,7 +66,7 @@ set xlabel "Vocabulary Size"
 set ylabel "#chars/token"
 
 plot for [i=1:3] \
-  sprintf("./results/%s.tsv", word(files,i)) \
+  sprintf(results_dir."/%s.tsv", word(files,i)) \
   using "vocab_size":"#chars/token" with linespoints ls i title word(labels,i)
 
 set output

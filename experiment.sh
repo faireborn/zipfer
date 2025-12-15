@@ -10,6 +10,10 @@ ALGORITHM_LIST=(
 )
 
 VOCAB_SIZE_LIST=(
+  "2000"
+  "4000"
+  "6000"
+  "8000"
   "10000"
   "20000"
   "30000"
@@ -22,9 +26,9 @@ VOCAB_SIZE_LIST=(
   "100000"
 )
 
-TRAINED_DIR=./trained
-ENCODED_DIR=./encoded
-RESULTS_DIR=./results
+TRAINED_DIR=./experiment/trained
+ENCODED_DIR=./experiment/encoded
+RESULTS_DIR=./experiment/results
 INPUT=./data/minipile/data/minipile.txt
 
 mkdir -p \
@@ -92,5 +96,7 @@ for ALGORITHM in "${ALGORITHM_LIST[@]}"; do
     printf "${VOCAB_SIZE}\t${RESULT}\n" >>"${RESULTS_DIR}"/"${ALGORITHM}".tsv
   done
 done
+
+gnuplot -e "results_dir='${RESULTS_DIR}'" ./plot.gp
 
 printf "\n\nDone!\n"
