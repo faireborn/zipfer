@@ -70,3 +70,27 @@ plot for [i=1:3] \
   using "vocab_size":"#chars/token" with linespoints ls i title word(labels,i)
 
 set output
+
+algorithms = "unigram bpe"
+vocab_sizes = "2000 4000 8000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000"
+
+do for [a in algorithms] {
+    do for [v in vocab_sizes] {
+
+        infile  = sprintf(results_dir."/%s_%s/tokens.tsv", a, v)
+        outfile = sprintf(results_dir."/zipf_%s_%s.png", a, v)
+ 
+        set output outfile
+ 
+        set key right top
+ 
+        set title sprintf("Zipf Plot (algorithm = %s, vocab size = %s)", a, v)
+        set xlabel "log(rank)"
+        set ylabel "log(freq)"
+
+        plot infile using "log_rank":"log_freq" \
+             with points pt 7 ps 0.4 title sprintf("vocab=%s", v)
+
+        set output
+    }
+}
