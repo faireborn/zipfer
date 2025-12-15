@@ -36,5 +36,5 @@ spm_train \
   --model_prefix="${TRAINED_DIR}"/"${ALGORITHM}"_"${VOCAB_SIZE}" \
   --model_type="${ALGORITHM}" \
   --vocab_size="${VOCAB_SIZE}" \
-  --input_sentence_size=2000000 \
+  --input_sentence_size=1000000 \
   --shuffle_input_sentence=true

@@ -26,9 +26,9 @@ VOCAB_SIZE_LIST=(
   "100000"
 )
 
-TRAINED_DIR=./experiment/trained
-ENCODED_DIR=./experiment/encoded
-RESULTS_DIR=./experiment/results
+TRAINED_DIR=./experiment/experiment/trained
+ENCODED_DIR=./experiment/experiment/encoded
+RESULTS_DIR=./experiment/experiment/results
 INPUT=./data/minipile/data/minipile.txt
 
 mkdir -p \
