@@ -7,10 +7,10 @@ set grid
 set key spacing 1.2
 set rmargin 6
 
-set style line 1 lw 2 pt 7
-set style line 2 lw 2 pt 5
-set style line 3 lw 2 pt 9
-set style line 4 lw 2 pt 11
+set style line 1 lw 2
+set style line 2 lw 2
+set style line 3 lw 2
+set style line 4 lw 2
 
 files  = "bpe unigram word char"
 labels = "BPE ULM Word Char"
@@ -75,22 +75,27 @@ algorithms = "unigram bpe"
 vocab_sizes = "2000 4000 8000 10000 20000 30000 40000 50000 60000 70000 80000 90000 100000"
 
 do for [a in algorithms] {
-    do for [v in vocab_sizes] {
 
-        infile  = sprintf(results_dir."/%s_%s/tokens.tsv", a, v)
-        outfile = sprintf(results_dir."/zipf_%s_%s.png", a, v)
- 
-        set output outfile
- 
-        set key right top
- 
-        set title sprintf("Zipf Plot (algorithm = %s, vocab size = %s)", a, v)
-        set xlabel "log(rank)"
-        set ylabel "log(freq)"
+    outfile = sprintf(results_dir."/zipf_%s.png", a)
 
-        plot infile using "log_rank":"log_freq" \
-             with points pt 7 ps 0.4 title sprintf("vocab=%s", v)
+    set output outfile
+ 
+    set key right top
+ 
+    set title sprintf("Zipf Plot for Different Vocabulary Sizes (algorithm = %s)", a)
+    set xlabel "log(rank)"
+    set ylabel "log(freq)"
 
-        set output
-    }
+    set style line 1 pt 7 ps 0.3
+    set style line 2 pt 5 ps 0.3
+    set style line 3 pt 9 ps 0.3
+    set style line 4 pt 11 ps 0.3
+
+    plot \
+      sprintf("./results/%s_4000/tokens.tsv", a)  using "log_rank":"log_freq" with points ls 1 title "4k", \
+      sprintf("./results/%s_30000/tokens.tsv", a)  using "log_rank":"log_freq" with points ls 2 title "30k", \
+      sprintf("./results/%s_60000/tokens.tsv", a)  using "log_rank":"log_freq" with points ls 3 title "60k", \
+      sprintf("./results/%s_100000/tokens.tsv", a) using "log_rank":"log_freq" with points ls 4 title "100k"
+
+    set output
 }
