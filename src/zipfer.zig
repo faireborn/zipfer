@@ -52,7 +52,7 @@ pub fn ZipferImpl(comptime T: type) type {
         }
 
         pub fn load(self: *Self, vocab_file: []const u8, target_file: []const u8) !void {
-            var vocab = try filesystem.ReadableFile(1 << 8).init(vocab_file);
+            var vocab = try filesystem.ReadableFile(1 << 10).init(vocab_file);
             defer vocab.deinit();
 
             var input = try filesystem.ReadableFile(1 << 22).init(target_file);

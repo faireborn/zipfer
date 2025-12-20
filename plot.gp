@@ -7,10 +7,10 @@ set grid
 set key spacing 1.2
 set rmargin 6
 
-set style line 1 lw 2
-set style line 2 lw 2
-set style line 3 lw 2
-set style line 4 lw 2
+set style line 1 lw 2 pt 7 ps 0.5
+set style line 2 lw 2 pt 7 ps 0.5
+set style line 3 lw 2 pt 7 ps 0.5
+set style line 4 lw 2 pt 7 ps 0.5
 
 files  = "bpe unigram word char"
 labels = "BPE ULM Word Char"
@@ -87,15 +87,15 @@ do for [a in algorithms] {
     set ylabel "log(freq)"
 
     set style line 1 pt 7 ps 0.3
-    set style line 2 pt 5 ps 0.3
-    set style line 3 pt 9 ps 0.3
-    set style line 4 pt 11 ps 0.3
+    set style line 2 pt 7 ps 0.3
+    set style line 3 pt 7 ps 0.3
+    set style line 4 pt 7 ps 0.3
 
     plot \
-      sprintf("./results/%s_4000/tokens.tsv", a)  using "log_rank":"log_freq" with points ls 1 title "4k", \
-      sprintf("./results/%s_30000/tokens.tsv", a)  using "log_rank":"log_freq" with points ls 2 title "30k", \
-      sprintf("./results/%s_60000/tokens.tsv", a)  using "log_rank":"log_freq" with points ls 3 title "60k", \
-      sprintf("./results/%s_100000/tokens.tsv", a) using "log_rank":"log_freq" with points ls 4 title "100k"
+      sprintf(results_dir."/%s_8000/tokens.tsv", a)  using "log_rank":"log_freq" with points ls 1 title "8k", \
+      sprintf(results_dir."/%s_32000/tokens.tsv", a)  using "log_rank":"log_freq" with points ls 2 title "32k", \
+      sprintf(results_dir."/%s_64000/tokens.tsv", a)  using "log_rank":"log_freq" with points ls 3 title "64k", \
+      sprintf(results_dir."/%s_96000/tokens.tsv", a) using "log_rank":"log_freq" with points ls 4 title "96k"
 
     set output
 }
