@@ -238,8 +238,14 @@ pub fn ZipferImpl(comptime T: type) type {
 }
 
 test "init deinit" {
-    var zipfer = ZipferImpl(f32).init(std.testing.allocator);
-    defer zipfer.deinit();
+    {
+        var zipfer = ZipferImpl(f32).init(std.testing.allocator);
+        defer zipfer.deinit();
+    }
+    {
+        var zipfer = ZipferImpl(f64).init(std.testing.allocator);
+        defer zipfer.deinit();
+    }
 }
 
 test {
