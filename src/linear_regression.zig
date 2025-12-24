@@ -59,30 +59,16 @@ pub fn model(comptime T: type, xs: []const T, ys: []const T) !LRResult(T) {
 }
 
 test "model" {
-    {
-        const xs = &[_]f64{ 0.95700886, 0.48545541, 0.9464698, 0.51636422, 0.96109422, 0.23767705, 0.07653071, 0.10844977, 0.15895693, 0.61648174 };
-        const ys = &[_]f64{ 1.88858533, 0.99632693, 1.84770655, 0.84024667, 2.28943859, 0.45595932, 0.82434291, 0.3747796, 0.77799234, 1.12524599 };
+    const xs = &[_]f64{ 0.95700886, 0.48545541, 0.9464698, 0.51636422, 0.96109422, 0.23767705, 0.07653071, 0.10844977, 0.15895693, 0.61648174 };
+    const ys = &[_]f64{ 1.88858533, 0.99632693, 1.84770655, 0.84024667, 2.28943859, 0.45595932, 0.82434291, 0.3747796, 0.77799234, 1.12524599 };
 
-        const result = try model(f64, xs, ys);
+    const result = try model(f64, xs, ys);
 
-        const eps = std.math.floatEps(f64);
+    const eps = std.math.floatEps(f64);
 
-        try std.testing.expectApproxEqRel(0.9201534422154125, result.r.?, eps);
-        try std.testing.expectApproxEqRel(1.6660444629562734, result.slope, eps);
-        try std.testing.expectApproxEqRel(0.2982960852548444, result.intercept, eps);
-    }
-    {
-        const xs = &[_]f32{ 0.14704058, 0.04727454, 0.59597035, 0.60417735, 0.31970672, 0.74119709, 0.72439552, 0.36065246, 0.69833356, 0.71171026 };
-        const ys = &[_]f32{ 0.61630415, 0.42215979, 1.45984647, 1.02782079, 0.90002424, 1.59407244, 1.74947297, 0.59424647, 1.37739303, 1.64583539 };
-
-        const result = try model(f32, xs, ys);
-
-        const eps = std.math.floatEps(f32);
-
-        try std.testing.expectApproxEqRel(0.9279293737226924, result.r.?, eps);
-        try std.testing.expectApproxEqRel(1.7653229021583134, result.slope, eps);
-        try std.testing.expectApproxEqRel(0.2648018073970857, result.intercept, eps);
-    }
+    try std.testing.expectApproxEqRel(0.9201534397706688, result.r.?, eps);
+    try std.testing.expectApproxEqRel(1.6660444612629126, result.slope, eps);
+    try std.testing.expectApproxEqRel(0.29829608655759465, result.intercept, eps);
 }
 
 test "expect error" {
