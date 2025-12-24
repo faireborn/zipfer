@@ -65,9 +65,11 @@ test "model" {
 
         const result = try model(f64, xs, ys);
 
-        try std.testing.expectApproxEqRel(0.9201534422154125, result.r.?, 1e-5);
-        try std.testing.expectApproxEqRel(1.6660444629562734, result.slope, 1e-5);
-        try std.testing.expectApproxEqRel(0.2982960852548444, result.intercept, 1e-5);
+        const eps = std.math.floatEps(f64);
+
+        try std.testing.expectApproxEqRel(0.9201534422154125, result.r.?, eps);
+        try std.testing.expectApproxEqRel(1.6660444629562734, result.slope, eps);
+        try std.testing.expectApproxEqRel(0.2982960852548444, result.intercept, eps);
     }
     {
         const xs = &[_]f32{ 0.14704058, 0.04727454, 0.59597035, 0.60417735, 0.31970672, 0.74119709, 0.72439552, 0.36065246, 0.69833356, 0.71171026 };
@@ -75,9 +77,11 @@ test "model" {
 
         const result = try model(f32, xs, ys);
 
-        try std.testing.expectApproxEqRel(0.9279293737226924, result.r.?, 1e-5);
-        try std.testing.expectApproxEqRel(1.7653229021583134, result.slope, 1e-5);
-        try std.testing.expectApproxEqRel(0.2648018073970857, result.intercept, 1e-5);
+        const eps = std.math.floatEps(f32);
+
+        try std.testing.expectApproxEqRel(0.9279293737226924, result.r.?, eps);
+        try std.testing.expectApproxEqRel(1.7653229021583134, result.slope, eps);
+        try std.testing.expectApproxEqRel(0.2648018073970857, result.intercept, eps);
     }
 }
 
