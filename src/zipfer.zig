@@ -130,18 +130,13 @@ pub fn ZipferImpl(comptime T: type) type {
             for (0..self.zipf.len) |i| {
                 // log(rank)
                 const log_rank = log10(@as(T, @floatFromInt(ranks[i])));
-                // We consider only tokens with log(rank) <= 6
-                if (log_rank > 6) {
-                    self.tail = i;
-                    break;
-                }
-                log_ranks[i] = log_rank;
 
                 // log(freq)
                 if (freqs[i] == 0) {
                     self.tail = i;
                     break;
                 }
+                log_ranks[i] = log_rank;
                 log_freqs[i] = log10(@as(T, @floatFromInt(freqs[i])));
             }
 
