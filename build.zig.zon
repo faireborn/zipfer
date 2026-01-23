@@ -1,6 +1,12 @@
 .{
     .name = .zipfer,
     .version = "0.1.0",
+    .dependencies = .{
+        .unzipf = .{
+            .url = "git+https://codeberg.org/faireborn/unzipf.git#054a9a19371e7ce76b3bd8eee3089099906fd3d9",
+            .hash = "unzipf-0.0.0-vrCWP0jqAQDVPBauCaJ_HYf7S_0tTDF3TLGuhdrWQCy-",
+        },
+    },
     .fingerprint = 0xebd02c4992fa14c,
     .minimum_zig_version = "0.15.2",
     .paths = .{""},

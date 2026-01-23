@@ -8,6 +8,7 @@ const lr = @import("linear_regression.zig");
 const util = @import("util.zig");
 const filesystem = @import("filesystem.zig");
 
+const Unzipf = @import("unzipf").Unzipf;
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const ArenaAllocator = std.heap.ArenaAllocator;

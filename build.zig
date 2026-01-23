@@ -4,9 +4,19 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const unzipf = b.dependency("unzipf", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     const mod = b.addModule("zipfer", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
+        .optimize = optimize,
+        .imports = &.{.{
+            .name = "unzipf",
+            .module = unzipf.module("unzipf"),
+        }},
     });
 
     const exe = b.addExecutable(.{
