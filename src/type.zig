@@ -22,5 +22,9 @@ pub fn ZipferResult(comptime T: type) type {
         mae: T,
         tokens_per_sent: T,
         characters_per_token: T,
+        loss: T,
+        alpha: T,
+        beta: T,
+        z: T,
     };
 }

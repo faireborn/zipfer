@@ -29,6 +29,10 @@ pub fn ZipferImpl(comptime T: type) type {
         zipf: MultiArrayList(Zipf(T)),
         tail: usize, // use only zipf[0..tail] and discard the rest
         result: ?ZipferResult(T),
+        ranks: []const T,
+        freqs: []const T,
+        norm_freqs: []const T,
+        total_freq: T,
 
         const Self = @This();
 
@@ -43,6 +47,10 @@ pub fn ZipferImpl(comptime T: type) type {
                 .zipf = .empty,
                 .tail = 0,
                 .result = null,
+                .ranks = undefined,
+                .freqs = undefined,
+                .norm_freqs = undefined,
+                .total_freq = undefined,
             };
         }
 
@@ -50,6 +58,8 @@ pub fn ZipferImpl(comptime T: type) type {
             self.arena.deinit();
             self.tokens.deinit(self.allocator);
             self.zipf.deinit(self.allocator);
+            self.allocator.free(self.ranks);
+            self.allocator.free(self.freqs);
         }
 
         pub fn load(self: *Self, vocab_file: []const u8, target_file: []const u8) !void {
@@ -119,6 +129,24 @@ pub fn ZipferImpl(comptime T: type) type {
         }
 
         pub fn eval(self: *Self) !void {
+            var prng: std.Random.DefaultPrng = .init(blk: {
+                var seed: u64 = undefined;
+                try std.posix.getrandom(std.mem.asBytes(&seed));
+                break :blk seed;
+            });
+            var rng = prng.random();
+            var unzipf = try Unzipf.init(
+                self.allocator,
+                &rng,
+                self.zipf.slice().items(.freq),
+            );
+            defer unzipf.deinit();
+            try unzipf.fit();
+            self.ranks = try Allocator.dupe(self.allocator, T, unzipf.ranks);
+            self.freqs = try Allocator.dupe(self.allocator, T, unzipf.freqs);
+            self.norm_freqs = try Allocator.dupe(self.allocator, T, unzipf.norm_freqs);
+            self.total_freq = unzipf.total_freq;
+
             self.tail = self.zipf.len;
 
             const sliced = self.zipf.slice();
@@ -161,6 +189,10 @@ pub fn ZipferImpl(comptime T: type) type {
                 .mae = Stats.mean(T, absolute_errors),
                 .tokens_per_sent = @as(T, @floatFromInt(self.num_tokens)) / @as(T, @floatFromInt(self.num_sentences)),
                 .characters_per_token = @as(T, @floatFromInt(self.num_characters)) / @as(T, @floatFromInt(self.num_tokens)),
+                .loss = unzipf.loss.?,
+                .alpha = unzipf.alpha.?,
+                .beta = unzipf.beta.?,
+                .z = unzipf.z.?,
             };
         }
 
@@ -206,29 +238,51 @@ pub fn ZipferImpl(comptime T: type) type {
             if (self.result) |result| {
                 var result_file = try dir.createFile("result.tsv", .{});
                 var result_writer = result_file.writer(&file_buffer);
-                try result_writer.interface.print("R^2\tslope\tintercept\tMAE\t#tokens/sent\t#chars/token\n", .{});
+                try result_writer.interface.print("R^2\tslope\tintercept\tMAE\t#tokens/sent\t#chars/token\tloss\talpha\tbeta\tz\n", .{});
                 if (self.result.?.R_squared) |R_squared| {
-                    try result_writer.interface.print("{}\t{}\t{}\t{}\t{}\t{}", .{
+                    try result_writer.interface.print("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}", .{
                         R_squared,
                         result.slope,
                         result.intercept,
                         result.mae,
                         result.tokens_per_sent,
                         result.characters_per_token,
+                        result.loss,
+                        result.alpha,
+                        result.beta,
+                        result.z,
                     });
                 } else {
-                    try result_writer.interface.print("null\t{}\t{}\t{}\t{}\t{}", .{
+                    try result_writer.interface.print("null\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}", .{
                         result.slope,
                         result.intercept,
                         result.mae,
                         result.tokens_per_sent,
                         result.characters_per_token,
+                        result.loss,
+                        result.alpha,
+                        result.beta,
+                        result.z,
                     });
                 }
                 try result_writer.interface.flush();
             } else {
                 return error.ResultIsNull;
             }
+
+            var piantadosi = try dir.createFile("piantadosi.tsv", .{});
+            var piantadosi_writer = piantadosi.writer(&file_buffer);
+            for (self.ranks, self.norm_freqs) |r, norm_freq| {
+                if (norm_freq == 0) {
+                    continue;
+                }
+                try piantadosi_writer.interface.print("{}\t{}\t{}\n", .{
+                    @log10(r),
+                    @log10(norm_freq),
+                    @log10(std.math.pow(T, r + self.result.?.beta, -self.result.?.alpha)) - @log10(self.result.?.z),
+                });
+            }
+            try piantadosi_writer.interface.flush();
         }
     };
 }
