@@ -25,6 +25,7 @@ pub fn ZipferImpl(comptime T: type) type {
         num_sentences: usize,
         num_tokens: usize,
         num_characters: usize,
+        num_unk: usize,
         tokens: MultiArrayList(Token),
         zipf: MultiArrayList(Zipf(T)),
         tail: usize, // use only zipf[0..tail] and discard the rest
@@ -43,6 +44,7 @@ pub fn ZipferImpl(comptime T: type) type {
                 .num_sentences = 0,
                 .num_tokens = 0,
                 .num_characters = 0,
+                .num_unk = 0,
                 .tokens = .empty,
                 .zipf = .empty,
                 .tail = 0,
@@ -102,7 +104,8 @@ pub fn ZipferImpl(comptime T: type) type {
             // Create MultiArrayList of `Zipf`
             try self.zipf.resize(self.allocator, self.tokens.len);
 
-            for (0..self.zipf.len) |token_id| {
+            // skip <unk>
+            for (1..self.zipf.len) |token_id| {
                 self.zipf.set(token_id, .{
                     .token_id = token_id,
                     .rank = undefined,
@@ -111,6 +114,7 @@ pub fn ZipferImpl(comptime T: type) type {
                     .log_freq = undefined,
                 });
             }
+            self.num_unk = self.tokens.get(0).freq;
 
             // Sort by freq
             const sliced = self.zipf.slice();
@@ -238,9 +242,9 @@ pub fn ZipferImpl(comptime T: type) type {
             if (self.result) |result| {
                 var result_file = try dir.createFile("result.tsv", .{});
                 var result_writer = result_file.writer(&file_buffer);
-                try result_writer.interface.print("R^2\tslope\tintercept\tMAE\t#tokens/sent\t#chars/token\tloss\talpha\tbeta\tz\n", .{});
+                try result_writer.interface.print("R^2\tslope\tintercept\tMAE\t#tokens/sent\t#chars/token\tloss\talpha\tbeta\tz\tunk\n", .{});
                 if (self.result.?.R_squared) |R_squared| {
-                    try result_writer.interface.print("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}", .{
+                    try result_writer.interface.print("{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}", .{
                         R_squared,
                         result.slope,
                         result.intercept,
@@ -251,9 +255,10 @@ pub fn ZipferImpl(comptime T: type) type {
                         result.alpha,
                         result.beta,
                         result.z,
+                        self.num_unk,
                     });
                 } else {
-                    try result_writer.interface.print("null\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}", .{
+                    try result_writer.interface.print("null\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}", .{
                         result.slope,
                         result.intercept,
                         result.mae,
@@ -263,6 +268,7 @@ pub fn ZipferImpl(comptime T: type) type {
                         result.alpha,
                         result.beta,
                         result.z,
+                        self.num_unk,
                     });
                 }
                 try result_writer.interface.flush();
